@@ -55,6 +55,10 @@
   .stats b{color:var(--fg);font-weight:600}
   .out{white-space:pre-wrap;word-break:break-word;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;min-height:110px;font:15px/1.65 inherit}
   .out.empty{color:var(--muted)}
+  .out mark{background:rgba(251,191,36,.22);color:#fde68a;border-radius:3px;padding:0 1px}
+  .out del{color:#7c8798;text-decoration:line-through;opacity:.8}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:8px}
+  .legend i{font-style:normal}
   .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:#0b1220;color:var(--fg);
     border:1px solid var(--accent);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:9}
   .toast.show{opacity:1;transform:translate(-50%,0)}
@@ -68,6 +72,11 @@
     h1{font-size:18px}
   }
 </style>
+<meta name="theme-color" content="#0f1115">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230f1115'/%3E%3Ctext x='50' y='70' font-size='56' text-anchor='middle' fill='%235eead4'%3E%E6%95%B4%3C/text%3E%3C/svg%3E">
+<meta property="og:title" content="文本整理器 — 粘贴中文乱文字，一键整理干净">
+<meta property="og:description" content="中文标点、全半角、中英文间距、多余空行，一次理顺，并能看见改了哪里。本地处理，不上传。">
+<meta property="og:type" content="website">
 </head>
 <body>
 <div class="wrap">
@@ -95,9 +104,11 @@
   <div class="card" style="margin-top:16px">
     <div class="fieldhead"><strong>② 整理结果</strong><span id="delta">—</span></div>
     <div class="out empty" id="output">点上面的「一键整理」，结果显示在这里。</div>
+    <div class="legend" id="legend" hidden><span><mark>黄色</mark> = 新加的</span><span><del>划线</del> = 删掉的</span></div>
     <div class="row">
       <button class="primary" id="copy">复制结果</button>
       <button class="ghost" id="useAsInput">拿结果继续整理</button>
+      <button class="ghost" id="toggleDiff">只显示成稿</button>
     </div>
     <div class="stats">
       <span>原文字数 <b id="s-before">0</b></span>
@@ -192,6 +203,62 @@ function fixMulti(text){
 const RULES = {punct:fixPunct, space:fixSpace, dup:fixDup, blank:fixBlank, multi:fixMulti};
 const ORDER = ['punct','space','dup','blank','multi'];
 
+let lastResult = '';
+let lastSource = '';
+let showDiff = localStorage.getItem('tidy.diff') !== 'off';
+
+// 逐词对比：只为了"看见改了哪儿"，改动通常是局部的，用带前瞻的简易对齐就够
+function tokenize(s){ return s.match(/[\u4e00-\u9fff]|[A-Za-z0-9]+|\s+|[^\s]/g) || []; }
+
+function diffOps(oldS, newS){
+  const a = tokenize(oldS), b = tokenize(newS);
+  if (a.length > 3000 || b.length > 3000) return null; // 太长就不做，直接给成稿
+  const ops = [];
+  const push = (t, text) => {
+    const last = ops[ops.length-1];
+    if (last && last.t === t) last.text += text;
+    else ops.push({t, text});
+  };
+  let i = 0, j = 0;
+  const W = 24;
+  while (i < a.length && j < b.length){
+    if (a[i] === b[j]) { push('=', a[i]); i++; j++; continue; }
+    let found = null;
+    for (let d = 1; d <= W && !found; d++){
+      for (let k = 0; k <= d && !found; k++){
+        if (a[i+k] !== undefined && b[j+d-k] !== undefined && a[i+k] === b[j+d-k]) found = {ai:k, bi:d-k};
+      }
+    }
+    if (found){
+      for (let x=0;x<found.ai;x++) push('-', a[i++]);
+      for (let y=0;y<found.bi;y++) push('+', b[j++]);
+    } else { push('-', a[i++]); push('+', b[j++]); }
+  }
+  while (i < a.length) push('-', a[i++]);
+  while (j < b.length) push('+', b[j++]);
+  return ops;
+}
+
+function paint(){
+  const res = lastResult;
+  output.innerHTML = '';
+  const legend = $('#legend');
+  if (!res){ output.textContent = '点上面的「一键整理」，结果显示在这里。'; output.classList.add('empty'); legend.hidden = true; return; }
+  output.classList.remove('empty');
+  const ops = showDiff ? diffOps(lastSource, res) : null;
+  $('#toggleDiff').textContent = showDiff ? '只显示成稿' : '显示改动位置';
+  if (!ops){ output.textContent = res; legend.hidden = true; return; }
+  legend.hidden = !ops.some(o => o.t !== '=');
+  const frag = document.createDocumentFragment();
+  ops.forEach(o => {
+    if (o.t === '='){ frag.appendChild(document.createTextNode(o.text)); return; }
+    const el = document.createElement(o.t === '+' ? 'mark' : 'del');
+    el.textContent = /^\s+$/.test(o.text) ? '·' : o.text;
+    frag.appendChild(el);
+  });
+  output.appendChild(frag);
+}
+
 function enabled(){
   return ORDER.filter(k => document.querySelector('input[data-rule="'+k+'"]').checked);
 }
@@ -212,8 +279,9 @@ function tidy(){
     el.className = 'n' + (c > 0 ? ' on' : '');
   });
   const total = Object.values(counts).reduce((a,b)=>a+b,0);
-  output.textContent = t;
-  output.classList.remove('empty');
+  lastSource = src;
+  lastResult = t;
+  paint();
   const before = src.replace(/\s/g,'').length;
   const after = t.replace(/\s/g,'').length;
   $('#s-before').textContent = before;
@@ -254,17 +322,21 @@ $('#sample').addEventListener('click', ()=>{
   tidy();
 });
 $('#clear').addEventListener('click', ()=>{
-  input.value=''; output.textContent='点上面的「一键整理」，结果显示在这里。';
-  output.classList.add('empty'); $('#counter').textContent='0 字';
+  input.value=''; lastResult=''; lastSource=''; paint();
+  $('#counter').textContent='0 字';
   $('#delta').textContent='—'; $('#s-before').textContent='0'; $('#s-after').textContent='0'; $('#s-changes').textContent='0';
   ['punct','space','dup','blank','multi'].forEach(k=>document.querySelector('[data-n="'+k+'"]').textContent='');
   input.focus();
 });
-$('#copy').addEventListener('click', ()=> copyText(output.textContent));
+$('#copy').addEventListener('click', ()=> copyText(lastResult));
 $('#useAsInput').addEventListener('click', ()=>{
-  const v = output.textContent;
-  if (!v || output.classList.contains('empty')) { toast('还没有结果'); return; }
-  input.value = v; $('#counter').textContent = Array.from(v).length + ' 字'; tidy();
+  if (!lastResult) { toast('还没有结果'); return; }
+  input.value = lastResult; $('#counter').textContent = Array.from(lastResult).length + ' 字'; tidy();
+});
+$('#toggleDiff').addEventListener('click', ()=>{
+  showDiff = !showDiff;
+  localStorage.setItem('tidy.diff', showDiff ? 'on' : 'off');
+  paint();
 });
 input.addEventListener('input', ()=>{ $('#counter').textContent = Array.from(input.value).length + ' 字'; });
 $('#rules').addEventListener('change', ()=>{ if (input.value.trim()) tidy(); });

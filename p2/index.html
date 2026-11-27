@@ -61,6 +61,11 @@
   .notes b{color:#9a3412}
   @media (max-width:420px){ .wrap{padding:18px 12px 44px} h1{font-size:20px} }
 </style>
+<meta name="theme-color" content="#fbf9f4">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237c3aed'/%3E%3Ctext x='50' y='70' font-size='56' text-anchor='middle' fill='%23ffffff'%3E%E6%8A%BD%3C/text%3E%3C/svg%3E">
+<meta property="og:title" content="线索抽取器 — 乱文本里的邮箱、电话、链接、金额抽成表">
+<meta property="og:description" content="粘一段聊天记录或报价单，自动抽出去重的联系方式与金额，可导出 CSV。本地处理。">
+<meta property="og:type" content="website">
 </head>
 <body>
 <div class="wrap">
@@ -100,6 +105,7 @@
     <button class="primary" id="copyAll">复制全部</button>
     <button id="csv">下载 CSV</button>
     <button id="csvSep">换成分号分隔</button>
+    <button id="share">复制规则链接</button>
   </div>
 
   <div class="notes">
@@ -271,6 +277,16 @@ $('#addRe').addEventListener('click', ()=>{
   if ($('#input').value.trim()) extract(); else toast('规则已记住，粘文本后点抽取');
 });
 $('#copyAll').addEventListener('click', ()=> copy(flat('')));
+
+function shareUrl(){
+  const t = Array.from(document.querySelectorAll('#types input:checked')).map(i=>i.dataset.type);
+  const p = new URLSearchParams();
+  if (t.length) p.set('types', t.join(','));
+  if (custom) p.set('re', custom);
+  const base = location.href.split(/[?#]/)[0];
+  return p.toString() ? base + '?' + p.toString() : base;
+}
+$('#share').addEventListener('click', ()=> copy(shareUrl()));
 $('#csv').addEventListener('click', ()=> downloadCSV(','));
 $('#csvSep').addEventListener('click', ()=> downloadCSV(';'));
 
@@ -293,6 +309,28 @@ function downloadCSV(sep){
 }
 
 (function init(){
+  // 支持别人发来的规则链接：?types=email,phone&re=NO-\d{6}
+  const sp = new URLSearchParams(location.search);
+  if (sp.has('types')){
+    const list = sp.get('types').split(',').filter(Boolean);
+    document.querySelectorAll('#types input').forEach(i=>{
+      i.checked = list.includes(i.dataset.type);
+      const chip = i.closest('.chip');
+      if (chip) chip.classList.toggle('on', i.checked);
+    });
+  }
+  if (sp.has('re')){
+    const v = sp.get('re');
+    try {
+      new RegExp(v, 'g');
+      custom = v; $('#customRe').value = v; $('#reErr').textContent = '';
+      const note = document.createElement('p');
+      note.className = 'hint';
+      note.style.margin = '8px 0 0';
+      note.textContent = '已载入别人分享的规则。粘上文本后点「开始抽取」。';
+      $('#customRe').parentNode.insertAdjacentElement('afterend', note);
+    } catch(e){ $('#reErr').textContent = '链接里的规则无效，已忽略'; }
+  }
   const btn = $('#buy');
   btn.hidden = false;
   if (BUY_URL){ btn.textContent = '买断 · $12'; btn.addEventListener('click', ()=>window.open(BUY_URL,'_blank')); }
