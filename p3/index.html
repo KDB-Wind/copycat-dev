@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>资料卡 — 报名、寄件、报销要填的那几行，点一下就复制</title>
+<meta name="description" content="姓名、地址、税号、发票抬头这些每次填表都要重新输入的信息，存一次在这台设备上，需要时点一下复制。不上传，不需要账号。">
+<style>
+  :root{
+    --bg:#f4f7f2; --ink:#15271c; --soft:#5c6b60; --line:#d8e2d6;
+    --card:#ffffff; --accent:#1f7a4d; --accent2:#e7f3ec; --warn:#a16207;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:22px 16px 60px}
+  h1{font-size:22px;margin:6px 0 6px;letter-spacing:-.2px}
+  .lede{color:var(--soft);font-size:14.5px;margin:0 0 18px}
+  .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .pill{font-size:12.5px;font-weight:700;color:var(--accent);background:var(--accent2);border-radius:999px;padding:3px 10px}
+  .pill.gray{color:var(--soft);background:#eceee9}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 1px 2px rgba(21,39,28,.04)}
+  .field{display:flex;gap:8px;align-items:center;padding:8px;border-radius:12px}
+  .field + .field{border-top:1px solid #f0f4ef}
+  .fbody{flex:1 1 auto;min-width:0}
+  .flabel{font-size:12px;color:var(--soft);font-weight:700;letter-spacing:.02em;margin-bottom:2px;display:flex;gap:6px;align-items:center}
+  .finput{
+    width:100%;border:1px solid transparent;background:#fafcf9;border-radius:9px;padding:9px 10px;
+    font:15px/1.4 inherit;color:var(--ink);outline:none;min-height:40px;
+  }
+  .finput:focus{border-color:var(--accent);background:#fff}
+  .finput::placeholder{color:#a9b4ab}
+  .acts{display:flex;gap:6px;flex:0 0 auto}
+  button{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);
+    font:600 14px/1 inherit;cursor:pointer;transition:.15s}
+  button:hover{background:#f6faf7}
+  button:active{transform:translateY(1px)}
+  .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .primary:hover{filter:brightness(1.07)}
+  .ghost{background:transparent}
+  .tiny{min-height:38px;padding:0 11px;font-size:13px;border-radius:9px}
+  .del{color:#9a3412;border-color:#eddcd2;background:#fffdfc}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  h2{font-size:15px;margin:26px 0 10px;color:var(--soft);letter-spacing:.02em}
+  .addbox{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .addbox input{flex:1 1 200px;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:15px/1 inherit;outline:none;background:#fff}
+  .addbox input:focus{border-color:var(--accent)}
+  .flash{position:fixed;left:50%;bottom:22px;transform:translate(-50%,14px);background:#15271c;color:#fff;
+    padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.18s;z-index:9;max-width:80vw;text-align:center}
+  .flash.show{opacity:1;transform:translate(-50%,0)}
+  .copied{background:#e7f3ec !important;border-color:#b7dcc7 !important}
+  .notes{font-size:13px;color:var(--soft);line-height:1.75;margin-top:18px;border:1px dashed var(--line);border-radius:12px;padding:12px 14px;background:#fbfdfa}
+  .notes b{color:var(--warn)}
+  footer{margin-top:26px;border-top:1px solid var(--line);padding-top:16px;font-size:13px;color:var(--soft);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  footer a{color:var(--accent);text-decoration:none;font-weight:600}
+  .empty{color:var(--soft);font-size:14px;padding:16px;text-align:center}
+  @media (max-width:420px){
+    .wrap{padding:16px 12px 48px}
+    h1{font-size:20px}
+    .acts{flex-direction:column}
+    .field{align-items:flex-start}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>资料卡</h1>
+  <p class="lede">报名表、寄件单、报销单、开发票，每次填的都是同样的那几行。存在这台设备上，填表时点一下就复制，不用再翻聊天记录。</p>
+
+  <div class="bar">
+    <span class="pill" id="filled">0 项已填</span>
+    <span class="pill gray">只存本机</span>
+  </div>
+
+  <div class="card" id="fields"></div>
+
+  <h2>加一项</h2>
+  <div class="addbox">
+    <input id="newLabel" placeholder="比如：收货人 / 工号 / 微信号" maxlength="20">
+    <button class="primary" id="addField">加进卡片</button>
+  </div>
+
+  <h2>整卡复制</h2>
+  <div class="row">
+    <button class="primary" id="copyText">复制成「名称：内容」</button>
+    <button id="copyTsv">复制成表格（粘进 Excel / 表单）</button>
+  </div>
+
+  <div class="row">
+    <button class="ghost tiny" id="exportJson">导出备份</button>
+    <button class="ghost tiny" id="importJson">导入备份</button>
+    <input type="file" id="fileInput" accept=".json,application/json" hidden>
+    <button class="ghost tiny del" id="reset">清空本机数据</button>
+  </div>
+
+  <div class="notes">
+    <b>注意：</b>内容只保存在这个浏览器的 localStorage 里，换设备、换浏览器、无痕模式都读不到；清浏览器数据会一起没掉，重要信息请用「导出备份」存一份 JSON。别在这张卡里存密码。<b>共用电脑不要存身份证号。</b>
+  </div>
+
+  <footer>
+    <span>无账号、无后端、不上传</span>
+    <a href="../">← 全部三件</a>
+    <button id="buy" hidden style="min-height:0;padding:8px 14px;font-size:13px"></button>
+  </footer>
+</div>
+<div class="flash" id="flash"></div>
+
+<script>
+const BUY_URL = ""; // 留空 = 内测免费
+const KEY = 'fillcard.fields.v1';
+const $ = (s)=>document.querySelector(s);
+
+const DEFAULT_FIELDS = [
+  {id:'name', label:'姓名', value:''},
+  {id:'phone', label:'手机', value:''},
+  {id:'email', label:'邮箱', value:''},
+  {id:'company', label:'单位 / 公司', value:''},
+  {id:'addr', label:'地址', value:''},
+  {id:'invoice', label:'发票抬头', value:''},
+  {id:'tax', label:'税号', value:''}
+];
+
+let fields = load();
+
+function load(){
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return DEFAULT_FIELDS.map(f=>({...f}));
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return DEFAULT_FIELDS.map(f=>({...f}));
+    return arr.filter(f=>f && typeof f.label === 'string').map(f=>({
+      id: f.id || ('f' + Math.random().toString(36).slice(2,8)),
+      label: f.label, value: typeof f.value === 'string' ? f.value : ''
+    }));
+  } catch(e){ return DEFAULT_FIELDS.map(f=>({...f})); }
+}
+
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(fields)); } catch(e){ flash('本机存储满了，保存失败'); } }
+
+function render(){
+  const box = $('#fields');
+  box.innerHTML = '';
+  if (!fields.length){ box.innerHTML = '<div class="empty">卡片是空的，下面加一项。</div>'; }
+  fields.forEach((f, idx)=>{
+    const row = document.createElement('div');
+    row.className = 'field';
+
+    const body = document.createElement('div');
+    body.className = 'fbody';
+    const lab = document.createElement('div');
+    lab.className = 'flabel';
+    lab.textContent = f.label;
+    const inp = document.createElement('input');
+    inp.className = 'finput';
+    inp.value = f.value;
+    inp.placeholder = '填一次，以后点「复制」';
+    inp.setAttribute('aria-label', f.label);
+    inp.addEventListener('input', ()=>{ f.value = inp.value; save(); countFilled(); });
+    body.appendChild(lab); body.appendChild(inp);
+
+    const acts = document.createElement('div');
+    acts.className = 'acts';
+    const bCopy = document.createElement('button');
+    bCopy.className = 'tiny primary';
+    bCopy.textContent = '复制';
+    bCopy.addEventListener('click', ()=>{
+      if (!f.value.trim()) { flash('「' + f.label + '」还没填'); inp.focus(); return; }
+      copy(f.value, bCopy);
+    });
+    const bDel = document.createElement('button');
+    bDel.className = 'tiny del';
+    bDel.textContent = '删';
+    bDel.setAttribute('aria-label', '删除 ' + f.label);
+    bDel.addEventListener('click', ()=>{
+      if (!confirm('从卡片里删掉「' + f.label + '」？')) return;
+      fields.splice(idx,1); save(); render();
+    });
+    acts.appendChild(bCopy); acts.appendChild(bDel);
+
+    row.appendChild(body); row.appendChild(acts);
+    box.appendChild(row);
+  });
+  countFilled();
+}
+
+function countFilled(){
+  const n = fields.filter(f=>f.value.trim()).length;
+  $('#filled').textContent = n + ' 项已填';
+}
+
+function flash(msg){
+  const el = $('#flash'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 1700);
+}
+
+async function copy(text, btn){
+  try { await navigator.clipboard.writeText(text); }
+  catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.left='-9999px';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy'); ta.remove();
+    if (!ok) { flash('复制失败，请手动选中'); return; }
+  }
+  flash('已复制：' + text.slice(0,24) + (text.length>24?'…':''));
+  if (btn){ btn.classList.add('copied'); setTimeout(()=>btn.classList.remove('copied'), 600); }
+}
+
+$('#addField').addEventListener('click', ()=>{
+  const inp = $('#newLabel');
+  const label = inp.value.trim();
+  if (!label){ flash('先写个名称'); inp.focus(); return; }
+  if (fields.some(f=>f.label === label)){ flash('已经有这一项了'); return; }
+  fields.push({id:'f'+Date.now().toString(36), label, value:''});
+  save(); render(); inp.value='';
+  const inputs = document.querySelectorAll('.finput');
+  if (inputs.length) inputs[inputs.length-1].focus();
+});
+
+$('#newLabel').addEventListener('keydown', (e)=>{ if (e.key === 'Enter') $('#addField').click(); });
+
+$('#copyText').addEventListener('click', ()=>{
+  const filled = fields.filter(f=>f.value.trim());
+  if (!filled.length){ flash('卡片还是空的'); return; }
+  copy(filled.map(f=>f.label + '：' + f.value).join('\n'));
+});
+
+$('#copyTsv').addEventListener('click', ()=>{
+  const filled = fields.filter(f=>f.value.trim());
+  if (!filled.length){ flash('卡片还是空的'); return; }
+  // 两行：表头 + 值，粘进 Excel 是两行；粘进单列表单则是制表符分隔
+  copy(filled.map(f=>f.label).join('\t') + '\n' + filled.map(f=>f.value.replace(/\t/g,' ')).join('\t'));
+});
+
+$('#exportJson').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify({v:1, fields}, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fillcard-backup.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  flash('已导出，存到安全的地方');
+});
+
+$('#importJson').addEventListener('click', ()=> $('#fileInput').click());
+
+$('#fileInput').addEventListener('change', (e)=>{
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try {
+      const data = JSON.parse(String(reader.result));
+      const arr = Array.isArray(data) ? data : data.fields;
+      if (!Array.isArray(arr)) throw new Error('文件里没有 fields');
+      fields = arr.filter(x=>x && typeof x.label === 'string').map(x=>({
+        id: x.id || ('f'+Math.random().toString(36).slice(2,8)),
+        label: String(x.label), value: typeof x.value === 'string' ? x.value : ''
+      }));
+      save(); render(); flash('已导入 ' + fields.length + ' 项');
+    } catch(err){ flash('导入失败：' + err.message); }
+  };
+  reader.onerror = ()=> flash('文件读不出来');
+  reader.readAsText(f, 'utf-8');
+  e.target.value = '';
+});
+
+$('#reset').addEventListener('click', ()=>{
+  if (!confirm('清空这张卡里的所有内容？（只清这台设备上的）')) return;
+  fields = DEFAULT_FIELDS.map(f=>({...f}));
+  save(); render(); flash('已清空');
+});
+
+(function init(){
+  render();
+  const btn = $('#buy');
+  btn.hidden = false;
+  if (BUY_URL){ btn.textContent = '买断 · $9'; btn.addEventListener('click', ()=>window.open(BUY_URL,'_blank')); }
+  else { btn.textContent = '内测免费'; btn.disabled = true; btn.style.opacity = .75; }
+})();
+</script>
+</body>
+</html>
