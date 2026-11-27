@@ -5,7 +5,9 @@ A/B/C 全部做完，D 没做（理由在最后，不是没时间，是不该在
 ## A. 能被搜到 —— 完成
 
 - `robots.txt`：允许全部 + 指向 sitemap。线上 200，内容对。
-- `sitemap.xml`：7 个 URL（首页 + p1–p6），`lastmod` 全写 2026-11-27。线上 200，`<loc>` 实测 7 条。
+- `sitemap.xml`：7 个 URL（首页 + p1–p6），`lastmod` 全写 2026-11-27。线上 200，`<loc>` 实测 7 条，XML 结构用 `[xml]` 解析校验通过。
+- **IndexNow 主动提交（比 sitemap 快一步）**：在仓库根放了 32 位 key 文件（线上 200），POST 7 个 URL 到 `api.indexnow.org`，**返回 202 Accepted**。Bing / Yandex / Naver / Seznam 共享这套协议，**不需要账号**——这是今晚唯一能自己走完的「外部收录流程」。Google 不吃 IndexNow，必须主理人用 Search Console。
+- `docs/indexing.md`：写清已做的、主理人要做的（Bing Webmaster + Search Console 各有几步）、以及**外部验收口径**（≥1 页显示「已编入索引」才算 A 真的成立，自评不算）。
 - `canonical`：7 个页面各一条，指向自己的正式 URL，不带 `index.html`。抽查 p4 线上源码第 8 行确有。
 - 标题改成长尾词（不是产品名）：
   - p1 `中文标点符号转换器 — 全半角、中英文间距、繁简一键转换`
