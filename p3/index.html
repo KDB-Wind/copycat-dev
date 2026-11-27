@@ -26,13 +26,13 @@
   .flabel{font-size:12px;color:var(--soft);font-weight:700;letter-spacing:.02em;margin-bottom:2px;display:flex;gap:6px;align-items:center}
   .finput{
     width:100%;border:1px solid transparent;background:#fafcf9;border-radius:9px;padding:9px 10px;
-    font:15px/1.4 inherit;color:var(--ink);outline:none;min-height:40px;
+    font-family:inherit;font-size:15px;line-height:1.4;color:var(--ink);outline:none;min-height:40px;
   }
   .finput:focus{border-color:var(--accent);background:#fff}
   .finput::placeholder{color:#a9b4ab}
   .acts{display:flex;gap:6px;flex:0 0 auto}
   button{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);
-    font:600 14px/1 inherit;cursor:pointer;transition:.15s}
+    font-family:inherit;font-size:14px;font-weight:600;line-height:1;cursor:pointer;transition:.15s}
   button:hover{background:#f6faf7}
   button:active{transform:translateY(1px)}
   .primary{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -43,12 +43,12 @@
   .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
   h2{font-size:15px;margin:26px 0 10px;color:var(--soft);letter-spacing:.02em}
   .addbox{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-  .addbox input{flex:1 1 200px;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:15px/1 inherit;outline:none;background:#fff}
+  .addbox input{flex:1 1 200px;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-family:inherit;font-size:15px;line-height:1;outline:none;background:#fff}
   .addbox input:focus{border-color:var(--accent)}
   .flash{position:fixed;left:50%;bottom:22px;transform:translate(-50%,14px);background:#15271c;color:#fff;
     padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.18s;z-index:9;max-width:80vw;text-align:center}
   .flash.show{opacity:1;transform:translate(-50%,0)}
-  .copied{background:#e7f3ec !important;border-color:#b7dcc7 !important}
+  .copied{background:#e7f3ec !important;border-color:#b7dcc7 !important;color:var(--accent) !important}
   .notes{font-size:13px;color:var(--soft);line-height:1.75;margin-top:18px;border:1px dashed var(--line);border-radius:12px;padding:12px 14px;background:#fbfdfa}
   .notes b{color:var(--warn)}
   footer{margin-top:26px;border-top:1px solid var(--line);padding-top:16px;font-size:13px;color:var(--soft);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
