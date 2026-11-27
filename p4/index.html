@@ -252,6 +252,7 @@ $('#go').addEventListener('click', async ()=>{
   if (preset) preset.kb = target;
   $('#go').disabled = true;
   $('#status').textContent = '正在试不同的尺寸和质量……';
+  $('#sizes').textContent = ''; $('#dims').textContent = ''; $('#verdict').textContent = ''; // 别让上一档的结论留在屏幕上
 
   try {
     const t0 = performance.now();
@@ -284,8 +285,11 @@ $('#go').addEventListener('click', async ()=>{
     } else {
       const sizeOk = !preset.w || (best.w === preset.w && best.h === preset.h);
       const kbOk = bytes <= preset.kb * 1024;
-      const label = preset.w ? preset.w + '×' + preset.h + 'px' : '不限尺寸';
-      if (sizeOk && kbOk){
+      const label = preset.w ? preset.w + '×' + preset.h + 'px' : (best.w + '×' + best.h + 'px');
+      if (!preset.w){
+        v.innerHTML = '<span class="' + (kbOk ? 'good' : 'bad') + '">实际 ' + kb(bytes) + ' KB，' + label +
+          ' — ' + (kbOk ? '符合「只要小于 ' + preset.kb + 'KB」' : '超过 ' + preset.kb + 'KB，把目标调大或换张更简单的图') + '</span>';
+      } else if (sizeOk && kbOk){
         v.innerHTML = '<span class="good">实际 ' + kb(bytes) + ' KB，' + label + ' — 符合「' + preset.name + ' + ≤' + preset.kb + 'KB」</span>';
       } else {
         v.innerHTML = '<span class="bad">不符合：' + label + ' 要求 ≤' + preset.kb + 'KB，实际 ' + kb(bytes) + ' KB' +
