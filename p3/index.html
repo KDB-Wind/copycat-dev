@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>资料卡 — 报名、寄件、报销要填的那几行，点一下就复制</title>
-<meta name="description" content="姓名、地址、税号、发票抬头这些每次填表都要重新输入的信息，存一次在这台设备上，需要时点一下复制。不上传，不需要账号。">
+<title>常用信息一键复制 — 姓名地址税号存一次，填表不用重打</title>
+<meta name="description" content="报名表、寄件单、报销单要填的那几行固定信息，存一次在这台设备上，填表时点一下复制。不上传，不需要账号。">
+<link rel="canonical" href="https://kdb-wind.github.io/copycat-dev/p3/">
 <style>
   :root{
     --bg:#f4f7f2; --ink:#15271c; --soft:#5c6b60; --line:#d8e2d6;
@@ -69,7 +70,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>资料卡</h1>
+  <h1>报名表上那几行固定信息，怎么才能不用每次重打？</h1>
   <p class="lede">报名表、寄件单、报销单、开发票，每次填的都是同样的那几行。存在这台设备上，填表时点一下就复制，不用再翻聊天记录。</p>
 
   <div class="bar">
@@ -100,6 +101,13 @@
 
   <div class="notes">
     <b>注意：</b>内容只保存在这个浏览器的 localStorage 里，换设备、换浏览器、无痕模式都读不到；清浏览器数据会一起没掉，重要信息请用「导出备份」存一份 JSON。别在这张卡里存密码。<b>共用电脑不要存身份证号。</b>
+  </div>
+
+  <h2>为什么不直接用浏览器自带的自动填充</h2>
+  <div class="notes" style="border-style:solid;background:#fff">
+    <p style="margin:0 0 10px">Chrome、Safari 的自动填充确实能填姓名、地址、电话，但它有两个前提：网站得用标准的表单字段，而且你得允许浏览器长期保存这些信息。现实里报名系统、单位内网、政务网站的表单经常是自定义的输入框，自动填充一个都认不出来；就算认出来，它填的是「整张表」，而你这次可能只想拿一个税号。</p>
+    <p style="margin:0 0 10px">更实际的问题是，自动填充把信息交给浏览器账户同步——公司电脑、家人共用的电脑上，这些内容会跟着账号跑到别的设备去。这张卡的做法相反：只存在当前这台机器的 localStorage 里，不上传、不同步，要带走就自己导出 JSON。</p>
+    <p style="margin:0">适合谁：一个月要报三次名、寄五次快递、填两张报销单的人。不适合谁：想把密码、银行卡 CVV 也存进来的人——这里没有加密，共用电脑上谁打开都能点复制。真正敏感的东西请用密码管理器。</p>
   </div>
 
   <footer>

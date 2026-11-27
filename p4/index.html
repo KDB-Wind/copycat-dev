@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>图片压缩到 100KB 以内 — 报名系统上传失败时用，照片不糊</title>
 <meta name="description" content="考试报名、事业单位上传照片卡在 100KB / 200KB？在浏览器里把照片压到指定大小，不糊、不上传、不用注册。">
+<link rel="canonical" href="https://kdb-wind.github.io/copycat-dev/p4/">
 <meta name="theme-color" content="#f5f6f8">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232563eb'/%3E%3Ctext x='50' y='70' font-size='52' text-anchor='middle' fill='%23ffffff'%3E%E5%8E%8B%3C/text%3E%3C/svg%3E">
 <meta property="og:title" content="图片压缩到 100KB 以内 — 报名照片上传失败时用">
@@ -31,6 +32,8 @@
   .primary{background:var(--accent);border-color:var(--accent);color:#fff}
   .primary:hover{background:var(--accent);color:#fff;filter:brightness(1.07)}
   button:disabled{opacity:.55;cursor:not-allowed}
+  .preset{min-height:40px;padding:0 12px;font-size:13.5px;border-radius:999px}
+  .preset.on{background:var(--accent2);border-color:var(--accent);color:var(--accent);font-weight:700}
   .status{font-size:14px;color:var(--soft);margin-top:12px;min-height:20px}
   .result{margin-top:14px;display:none;grid-template-columns:128px 1fr;gap:14px;align-items:start}
   .result.on{display:grid}
@@ -66,6 +69,16 @@
     <input type="file" id="file" accept="image/*" hidden>
 
     <div class="row">
+      <span class="f">常见规格</span>
+      <button class="preset" data-w="295" data-h="413" data-kb="100">一寸 295×413</button>
+      <button class="preset" data-w="413" data-h="579" data-kb="100">二寸 413×579</button>
+      <button class="preset" data-w="390" data-h="567" data-kb="200">护照 390×567</button>
+      <button class="preset" data-w="600" data-h="600" data-kb="240">签证 600×600</button>
+      <button class="preset" data-w="0" data-h="0" data-kb="100">只要小于 100KB</button>
+    </div>
+    <p class="status" id="presetNote" style="margin-top:6px">选了规格会按「居中裁切（偏上）→ 压到目标 KB」处理，尺寸和体积都会在结果里逐项核对。</p>
+
+    <div class="row">
       <span class="f">目标大小</span>
       <input type="number" id="target" value="100" min="10" max="5000" step="10">
       <span class="f">KB</span>
@@ -86,6 +99,7 @@
       <div class="meta">
         <div id="sizes"></div>
         <div id="dims"></div>
+        <div id="verdict" style="margin-top:6px"></div>
         <div class="row" style="margin-top:8px">
           <button class="primary" id="download">下载这张</button>
         </div>
@@ -118,6 +132,7 @@
 const BUY_URL = ""; // 留空 = 内测免费
 const $ = (s)=>document.querySelector(s);
 let srcFile = null, srcImg = null, outBlob = null, outName = '';
+let preset = null; // {w, h, kb, label}
 
 function toast(msg){
   const el = $('#toast'); el.textContent = msg; el.classList.add('show');
@@ -156,7 +171,10 @@ function load(file){
 }
 
 $('#reset').addEventListener('click', ()=>{
-  srcFile = null; srcImg = null; outBlob = null; outName = '';
+  srcFile = null; srcImg = null; outBlob = null; outName = ''; preset = null;
+  document.querySelectorAll('.preset').forEach(b=>b.classList.remove('on'));
+  $('#verdict').textContent = '';
+  $('#presetNote').textContent = '选了规格会按「居中裁切（偏上）→ 压到目标 KB」处理，尺寸和体积都会在结果里逐项核对。';
   $('#file').value = ''; $('#go').disabled = true; $('#reset').disabled = true;
   $('#result').classList.remove('on');
   $('#status').textContent = '还没有选照片。';
@@ -167,8 +185,33 @@ function canvasToBlob(canvas, type, quality){
   return new Promise((resolve)=> canvas.toBlob(resolve, type, quality));
 }
 
-async function compress(img, maxBytes, type){
-  // 第 1 步：从大往小试尺寸；每个尺寸里二分质量，取第一个达标的结果
+async function compress(img, maxBytes, type, preset){
+  // 选了证件照规格：尺寸固定，只调质量；裁切按「居中偏上」，避免把头顶切掉
+  if (preset && preset.w && preset.h){
+    const canvas = document.createElement('canvas');
+    canvas.width = preset.w; canvas.height = preset.h;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, preset.w, preset.h);
+    const scale = Math.max(preset.w / img.naturalWidth, preset.h / img.naturalHeight);
+    const sw = preset.w / scale, sh = preset.h / scale;
+    const sx = (img.naturalWidth - sw) / 2;
+    const sy = Math.max(0, Math.min(img.naturalHeight - sh, (img.naturalHeight - sh) * 0.15));
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, preset.w, preset.h);
+
+    let lo = 0.25, hi = 0.95, found = null;
+    for (let i = 0; i < 8; i++){
+      const q = (lo + hi) / 2;
+      const blob = await canvasToBlob(canvas, type, q);
+      if (!blob) break;
+      if (blob.size <= maxBytes){ found = {blob, q, w: preset.w, h: preset.h}; lo = q; }
+      else { hi = q; }
+    }
+    if (found) return found;
+    const last = await canvasToBlob(canvas, type, 0.25);
+    return last ? {blob: last, q: 0.25, w: preset.w, h: preset.h, tooBig: true} : null;
+  }
+
+  // 没选规格：先缩尺寸，再在能达标的尺寸里挑质量最高的（质量 ≥0.7 就停）
   const sizes = [];
   const longest = Math.max(img.naturalWidth, img.naturalHeight);
   for (let target = Math.min(longest, 2000); target >= 240; target = Math.round(target * 0.8)){
@@ -194,8 +237,7 @@ async function compress(img, maxBytes, type){
       else { hi = q; }
     }
     if (found && !fallback) fallback = found;
-    if (found && found.q >= 0.7){ best = found; break; } // 质量够高就停，别为了像素数把脸压糊
-    // 这个尺寸连质量 0.4 都塞不下，继续缩小
+    if (found && found.q >= 0.7){ best = found; break; }
     const last = await canvasToBlob(canvas, type, 0.4);
     if (last && last.size <= maxBytes && !fallback) fallback = {blob:last, q:0.4, w, h};
   }
@@ -207,12 +249,13 @@ $('#go').addEventListener('click', async ()=>{
   const target = Math.max(10, Math.min(5000, Number($('#target').value) || 100));
   const maxBytes = target * 1024;
   const type = $('#format').value;
+  if (preset) preset.kb = target;
   $('#go').disabled = true;
   $('#status').textContent = '正在试不同的尺寸和质量……';
 
   try {
     const t0 = performance.now();
-    const best = await compress(srcImg, maxBytes, type);
+    const best = await compress(srcImg, maxBytes, type, preset);
     const ms = Math.round(performance.now() - t0);
     if (!best){
       $('#status').textContent = '压不到 ' + target + 'KB。这张图可能本身细节太多，试试把目标调到 ' + (target * 2) + 'KB，或换一张更简单的照片。';
@@ -222,21 +265,54 @@ $('#go').addEventListener('click', async ()=>{
     outBlob = best.blob;
     const ext = type === 'image/webp' ? 'webp' : 'jpg';
     const base = (srcFile.name || 'photo').replace(/\.[^.]+$/, '');
-    outName = base + '-' + target + 'kb.' + ext;
+    outName = base + '-' + (preset && preset.w ? preset.w + 'x' + preset.h : target + 'kb') + '.' + ext;
     const url = URL.createObjectURL(outBlob);
     $('#thumb').src = url;
     $('#result').classList.add('on');
-    const diff = Math.round((1 - outBlob.size / srcFile.size) * 100);
-    $('#sizes').innerHTML = '<b>' + kb(srcFile.size) + ' KB → ' + kb(outBlob.size) + ' KB</b> ' +
-      '<span class="' + (outBlob.size <= maxBytes ? 'good' : 'bad') + '">' + (outBlob.size <= maxBytes ? '达标' : '超出') + '（目标 ' + target + ' KB）</span>' +
+    const bytes = outBlob.size;
+    const diff = Math.round((1 - bytes / srcFile.size) * 100);
+    $('#sizes').innerHTML = '<b>' + kb(srcFile.size) + ' KB → ' + kb(bytes) + ' KB</b> ' +
+      '<span class="' + (bytes <= maxBytes ? 'good' : 'bad') + '">' + (bytes <= maxBytes ? '体积达标' : '体积超出') + '</span>' +
       '<span style="color:#6b7280"> · 省了 ' + (diff > 0 ? diff + '%' : '0%') + '</span>';
     $('#dims').textContent = srcImg.naturalWidth + '×' + srcImg.naturalHeight + ' → ' + best.w + '×' + best.h +
-      ' · 质量 ' + best.q.toFixed(2) + ' · ' + ms + 'ms 算完';
-    $('#status').textContent = '好了。点「下载这张」存到本地，再拿去上传。';
+      ' · 质量 ' + best.q.toFixed(2) + ' · ' + ms + 'ms';
+
+    // 判断句：这一行才是这个工具跟「随便压一下」的区别
+    const v = $('#verdict');
+    if (!preset){
+      v.innerHTML = '<span style="color:#6b7280">没选证件照规格，只核对了体积；要按 295×413 之类的尺寸出图，点上面的规格再压一次。</span>';
+    } else {
+      const sizeOk = !preset.w || (best.w === preset.w && best.h === preset.h);
+      const kbOk = bytes <= preset.kb * 1024;
+      const label = preset.w ? preset.w + '×' + preset.h + 'px' : '不限尺寸';
+      if (sizeOk && kbOk){
+        v.innerHTML = '<span class="good">实际 ' + kb(bytes) + ' KB，' + label + ' — 符合「' + preset.name + ' + ≤' + preset.kb + 'KB」</span>';
+      } else {
+        v.innerHTML = '<span class="bad">不符合：' + label + ' 要求 ≤' + preset.kb + 'KB，实际 ' + kb(bytes) + ' KB' +
+          (sizeOk ? '' : '，尺寸也不对') + '。把目标调大，或换一张更简单的照片。</span>';
+      }
+    }
+    $('#status').textContent = best.tooBig
+      ? '这个规格在最低质量下也压不进 ' + preset.kb + 'KB，上面的结果给你的是最小能到的体积。'
+      : '好了。点「下载这张」存到本地，再拿去上传。';
   } catch(err){
     $('#status').textContent = '压缩出错了：' + (err && err.message ? err.message : String(err)) + '。换一张图再试，或把目标调大一点。';
   }
   $('#go').disabled = false;
+});
+
+document.querySelectorAll('.preset').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.preset').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    const w = Number(btn.dataset.w), h = Number(btn.dataset.h), kb = Number(btn.dataset.kb);
+    preset = w && h ? {w, h, kb, name: btn.textContent.trim(), label: btn.textContent.trim()} : {w:0, h:0, kb, name: btn.textContent.trim()};
+    $('#target').value = kb;
+    $('#presetNote').textContent = w && h
+      ? '已选「' + preset.name + '」：居中偏上裁切成 ' + w + '×' + h + 'px，再压到 ≤' + kb + 'KB。'
+      : '已选「只要小于 ' + kb + 'KB」：保持原比例，只压体积。';
+    if (srcImg) $('#go').click();
+  });
 });
 
 $('#download').addEventListener('click', ()=>{
