@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>免费二维码生成器，不注册、不加水印 — 打印前先看尺寸</title>
+<meta name="description" content="输入网址或文字直接生成二维码，导出 PNG 和 SVG，不注册、不加水印、码里不藏跳转。线下打印要知道的尺寸和留白也写在下面。">
+<meta name="theme-color" content="#fdf8f1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23ea580c'/%3E%3Crect x='24' y='24' width='20' height='20' fill='%23fff'/%3E%3Crect x='56' y='24' width='20' height='20' fill='%23fff'/%3E%3Crect x='24' y='56' width='20' height='20' fill='%23fff'/%3E%3Crect x='56' y='56' width='8' height='8' fill='%23fff'/%3E%3C/svg%3E">
+<meta property="og:title" content="免费二维码生成器，不注册、不加水印">
+<meta property="og:description" content="网址或文字直接生成，导出 PNG / SVG，静态码不会被第三方收回。">
+<style>
+  :root{--bg:#fdf8f1;--ink:#1c1917;--soft:#78716c;--line:#e7e0d5;--card:#fff;--accent:#ea580c;--accent2:#fff1e6;--ok:#15803d;--bad:#b91c1c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:780px;margin:0 auto;padding:26px 16px 60px}
+  h1{font-size:23px;line-height:1.4;margin:0 0 10px;letter-spacing:-.2px}
+  .answer{font-size:15px;color:#44403c;background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 16px;margin:0 0 18px}
+  .answer b{color:var(--ink)}
+  .tool{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .body{display:grid;grid-template-columns:1fr 260px;gap:18px;align-items:start}
+  label.f{display:block;font-size:12.5px;font-weight:700;color:var(--soft);margin-bottom:6px}
+  textarea,input,select,button{font-family:inherit;font-size:15px}
+  textarea{width:100%;min-height:96px;border:1px solid var(--line);border-radius:10px;padding:11px;outline:none;resize:vertical;background:#fff;color:var(--ink)}
+  textarea:focus,input:focus,select:focus{border-color:var(--accent)}
+  input[type=text]{width:100%;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:0 11px;outline:none;background:#fff;color:var(--ink)}
+  .opts{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .opt{display:flex;flex-direction:column;gap:4px}
+  select{min-height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;background:#fff;color:var(--ink);outline:none}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  button{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:600;line-height:1;cursor:pointer}
+  button:hover{background:#faf7f2}
+  .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .primary:hover{filter:brightness(1.07)}
+  .preview{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px}
+  #canvas{width:100%;max-width:236px;height:auto;border-radius:6px;background:#fff}
+  .meta{font-size:12px;color:var(--soft);text-align:center;line-height:1.6}
+  .err{color:var(--bad);font-size:13.5px;margin-top:10px;min-height:20px}
+  h2{font-size:17px;margin:30px 0 10px}
+  .prose{font-size:15px;color:#44403c;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 18px}
+  .prose p{margin:12px 0}
+  .prose li{margin:6px 0}
+  .prose b{color:var(--ink)}
+  footer{margin-top:28px;border-top:1px solid var(--line);padding-top:16px;font-size:12.5px;color:var(--soft);line-height:1.8}
+  footer a{color:var(--accent);text-decoration:none;font-weight:600}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,14px);background:#1c1917;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:9}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  @media(max-width:680px){ .body{grid-template-columns:1fr} .preview{order:-1} #canvas{max-width:200px} }
+  @media(max-width:420px){ .wrap{padding:18px 12px 48px} h1{font-size:20px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>免费二维码，为什么非要你注册？</h1>
+  <p class="answer"><b>因为那些免费额度是「动态码」。</b>码里存的不是你的网址，而是对方服务器的短链，你注册后它才能统计扫码次数、也才能在你停付后把码关掉。真正的<b>静态码</b>把内容直接编进方块里，谁都能生成，扫一辈子不用回原网站。下面这个就是静态码，不注册、不加水印、不经过任何服务器。</p>
+
+  <div class="tool">
+    <div class="body">
+      <div>
+        <label class="f" for="text">网址或文字</label>
+        <textarea id="text" placeholder="https://你的店铺.com&#10;或者一段纯文字、Wi-Fi 密码、收款备注">https://example.com</textarea>
+
+        <div class="opts">
+          <div class="opt"><label class="f" for="size">导出尺寸</label>
+            <select id="size"><option value="512">512 像素</option><option value="1024" selected>1024 像素</option><option value="256">256 像素</option><option value="2048">2048 像素</option></select>
+          </div>
+          <div class="opt"><label class="f" for="level">容错等级</label>
+            <select id="level"><option value="L">L（最省空间）</option><option value="M" selected>M（通用）</option><option value="Q">Q（稍脏也能扫）</option><option value="H">H（可盖 logo）</option></select>
+          </div>
+          <div class="opt"><label class="f" for="margin">留白（模块数）</label>
+            <select id="margin"><option value="0">0</option><option value="2">2</option><option value="4" selected>4（标准静区）</option></select>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="primary" id="make">生成</button>
+          <button id="png">下载 PNG</button>
+          <button id="svg">下载 SVG</button>
+        </div>
+        <div class="err" id="err"></div>
+      </div>
+
+      <div class="preview">
+        <canvas id="canvas" width="240" height="240" aria-label="二维码预览"></canvas>
+        <div class="meta" id="meta">还没有生成</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>印在纸上之前，注意这三件</h2>
+  <div class="prose">
+    <p><b>尺寸：至少 2 厘米见方。</b>扫码依赖摄像头分辨黑白模块，印得太小，手机对焦再准也散焦。名片、贴纸控制在 2–2.5cm，海报可以到 5cm 以上。</p>
+    <p><b>留白别切。</b>二维码四周有一圈「静区」，是给扫码器识别边界的。排版时把码塞进色块里、或者贴着边框裁掉，是最常见的扫不出来原因。</p>
+    <p><b>深码浅底，别反色。</b>黑码白底最稳；白码黑底、彩色底上放彩码，很多老机型直接失败。要放 logo 就选 H 级容错，并且别超过码面积的 20%。</p>
+    <p><b>静态码的边界</b>：内容编进码里，所以改网址就得重新印；内容越长，方块越密，印小了更难扫——一长串带参数的链接建议先缩短再生成。要统计扫码次数只能用动态码，那是另一套东西，不在这个页面。</p>
+  </div>
+
+  <footer>
+    二维码编码部分使用 <a href="https://github.com/kazuhikoarase/qrcode-generator" target="_blank" rel="noopener">kazuhikoarase/qrcode-generator</a>（MIT License，Copyright © 2009 Kazuhiko Arase），改动：原样内联为单页的一部分，未修改编码算法；界面、导出与文案为本页新写。许可原文见仓库根目录 <code>LICENSE-qrcode-generator.txt</code>。<br>
+    <a href="../">← 全部作品</a>
+    <button id="buy" hidden style="min-height:0;padding:8px 14px;font-size:13px;margin-left:8px"></button>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>/*__QRCODE_LIB__*/</script>
+<script>
+const BUY_URL = ""; // 留空 = 内测免费
+const $ = (s)=>document.querySelector(s);
+let last = null; // {count, scale, margin}
+
+function toast(msg){
+  const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 1500);
+}
+
+function build(){
+  const text = $('#text').value.trim();
+  const level = $('#level').value;
+  const margin = Number($('#margin').value);
+  const size = Number($('#size').value);
+  $('#err').textContent = '';
+  if (!text){ $('#err').textContent = '先填内容再生成。'; return null; }
+  let qr;
+  try {
+    qr = qrcode(0, level);
+    qr.addData(text);
+    qr.make();
+  } catch(e){
+    $('#err').textContent = '内容太长，这个容错等级装不下。把文字缩短、或把容错降到 L 再试。';
+    return null;
+  }
+  const count = qr.getModuleCount();
+  const total = count + margin * 2;
+  const scale = Math.max(2, Math.floor(size / total));
+  const px = total * scale;
+
+  const canvas = $('#canvas');
+  canvas.width = px; canvas.height = px;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, px, px);
+  ctx.fillStyle = '#000000';
+  for (let r = 0; r < count; r++){
+    for (let c = 0; c < count; c++){
+      if (qr.isDark(r, c)) ctx.fillRect((c + margin) * scale, (r + margin) * scale, scale, scale);
+    }
+  }
+  last = {qr, count, scale, margin, px, text, level};
+  $('#meta').innerHTML = count + '×' + count + ' 模块 · 导出 ' + px + '×' + px + 'px<br>容错 ' + level + ' · 留白 ' + margin + ' 模块';
+  return last;
+}
+
+$('#make').addEventListener('click', ()=>{ if (build()) toast('生成好了'); });
+
+function downloadBlob(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+}
+
+$('#png').addEventListener('click', ()=>{
+  if (!last && !build()) return;
+  $('#canvas').toBlob((blob)=>{
+    if (!blob){ toast('导出失败，换个浏览器试试'); return; }
+    downloadBlob(blob, 'qrcode-' + last.px + '.png');
+    toast('PNG 已开始下载');
+  }, 'image/png');
+});
+
+$('#svg').addEventListener('click', ()=>{
+  if (!last && !build()) return;
+  const {qr, count, margin} = last;
+  const total = count + margin * 2;
+  let path = '';
+  for (let r = 0; r < count; r++){
+    for (let c = 0; c < count; c++){
+      if (qr.isDark(r, c)) path += 'M' + (c + margin) + ' ' + (r + margin) + 'h1v1h-1z';
+    }
+  }
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + total + ' ' + total + '" shape-rendering="crispEdges">' +
+    '<rect width="' + total + '" height="' + total + '" fill="#ffffff"/>' +
+    '<path d="' + path + '" fill="#000000"/></svg>';
+  downloadBlob(new Blob([svg], {type:'image/svg+xml'}), 'qrcode.svg');
+  toast('SVG 已开始下载（矢量，印刷用这个）');
+});
+
+$('#text').addEventListener('input', ()=>{ if ($('#canvas').width > 1 && last) { /* 等用户点生成 */ } });
+
+(function init(){
+  build();
+  const btn = $('#buy');
+  btn.hidden = false;
+  if (BUY_URL){ btn.textContent = '买断 · $7'; btn.addEventListener('click', ()=>window.open(BUY_URL,'_blank')); }
+  else { btn.textContent = '内测免费'; btn.disabled = true; btn.style.opacity=.75; }
+})();
+</script>
+</body>
+</html>

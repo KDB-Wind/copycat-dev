@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>三件小工具 — 文本整理 / 线索抽取 / 资料卡</title>
+<title>六件小工具 — 整理文字 / 抽线索 / 资料卡 / 压图 / 时区 / 二维码</title>
+<meta name="theme-color" content="#0d0f13">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230d0f13'/%3E%3Ctext x='50' y='70' font-size='52' text-anchor='middle' fill='%235eead4'%3E6%3C/text%3E%3C/svg%3E">
+<meta property="og:title" content="六件小工具 — 整理文字 / 抽线索 / 资料卡 / 压图 / 时区 / 二维码">
+<meta property="og:description" content="六个单页小工具，打开就能用，不用注册，内容不上传。">
 <style>
   *{box-sizing:border-box}
   body{margin:0;background:#0d0f13;color:#e9edf4;
@@ -18,22 +22,19 @@
   .t{font-size:18px;font-weight:700;margin:6px 0 4px}
   .d{font-size:14.5px;color:#9aa5b5;margin:0}
   .url{font-size:12.5px;color:#5b6673;margin-top:8px;font-family:ui-monospace,Menlo,Consolas,monospace}
-  footer{margin-top:36px;color:#5b6673;font-size:13px;border-top:1px solid #1d232c;padding-top:16px}
+  footer{margin-top:36px;color:#5b6673;font-size:13px;border-top:1px solid #1d232c;padding-top:16px;line-height:1.8}
+  footer a{color:#5eead4;text-decoration:none}
 </style>
-<meta name="theme-color" content="#0d0f13">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230d0f13'/%3E%3Ctext x='50' y='70' font-size='52' text-anchor='middle' fill='%235eead4'%3E3%3C/text%3E%3C/svg%3E">
-<meta property="og:title" content="三件小工具 — 文本整理 / 线索抽取 / 资料卡">
-<meta property="og:description" content="三个单页小工具，打开就能用，不用注册，内容不上传。">
 </head>
 <body>
 <div class="wrap">
-  <h1>三件小工具</h1>
+  <h1>六件小工具</h1>
   <p class="lede">都是单页网页、打开就能用、不用注册、内容不上传。手机上也行。</p>
 
   <a class="item" href="./p1/">
     <div class="n">01 · 文字</div>
     <div class="t">文本整理器</div>
-    <p class="d">把从 Word、微信、PDF 复制出来的乱标点、多余空格、一堆空行，一键整理成能直接发的东西。</p>
+    <p class="d">从 Word、微信、PDF 复制出来的乱标点、多余空格、一堆空行，一键理顺；能看见改了哪里，还能繁简互转、导出 .md。</p>
     <div class="url">/p1/</div>
   </a>
 
@@ -51,8 +52,30 @@
     <div class="url">/p3/</div>
   </a>
 
+  <a class="item" href="./p4/">
+    <div class="n">04 · 图片</div>
+    <div class="t">图片压缩到指定 KB</div>
+    <p class="d">报名系统只收 100KB？先缩尺寸再降质量，压到指定大小还不糊，照片不上传。</p>
+    <div class="url">/p4/</div>
+  </a>
+
+  <a class="item" href="./p5/">
+    <div class="n">05 · 时间</div>
+    <div class="t">时区会议时间</div>
+    <p class="d">填一个开会时间，看清北京、纽约、伦敦各是几点、对方在不在上班，夏令时自动算。</p>
+    <div class="url">/p5/</div>
+  </a>
+
+  <a class="item" href="./p6/">
+    <div class="n">06 · 打印</div>
+    <div class="t">二维码生成</div>
+    <p class="d">静态码，不注册、不加水印、码里不藏跳转，能导 PNG 和印刷用的 SVG。</p>
+    <div class="url">/p6/</div>
+  </a>
+
   <footer>
-    三个工具彼此独立，数据都留在你自己的浏览器里。目前内测免费。
+    六个工具彼此独立，数据都留在你自己的浏览器里。目前内测免费。<br>
+    p6 的二维码编码用了 <a href="https://github.com/kazuhikoarase/qrcode-generator" target="_blank" rel="noopener">qrcode-generator</a>（MIT），来源与改动见仓库 <code>NOTICE.md</code>。
   </footer>
 </div>
 </body>

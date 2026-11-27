@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>北京时间和美东时间换算 — 约跨国会议时，先看对方几点</title>
+<meta name="description" content="填一个开会时间，一次看清北京、纽约、伦敦、洛杉矶等城市分别几点、在不在工作时间，自动处理夏令时。不用注册。">
+<meta name="theme-color" content="#0b1220">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230b1220'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%23fbbf24' stroke-width='7'/%3E%3Cpath d='M50 32v20l14 9' stroke='%23fbbf24' stroke-width='7' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta property="og:title" content="北京时间和美东时间换算 — 约跨国会议时先看对方几点">
+<meta property="og:description" content="一个时间，看清所有城市几点、在不在一上班时间，自动处理夏令时。">
+<style>
+  :root{--bg:#0b1220;--panel:#131c2e;--panel2:#18233a;--line:#27334b;--fg:#e8eefc;--soft:#94a3b8;--accent:#fbbf24;--accent-ink:#3a2a00;--ok:#34d399;--bad:#f87171}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:800px;margin:0 auto;padding:26px 16px 60px}
+  h1{font-size:23px;line-height:1.4;margin:0 0 10px;letter-spacing:-.2px}
+  .answer{font-size:15px;color:#c7d2e8;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 16px;margin:0 0 18px}
+  .answer b{color:#fff}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .grid{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12.5px;color:var(--soft);font-weight:700}
+  input,select,button{font-family:inherit;font-size:15px}
+  input[type=datetime-local],select{min-height:44px;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:0 10px;outline:none}
+  input:focus,select:focus{border-color:var(--accent)}
+  button{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font-weight:600;cursor:pointer;line-height:1}
+  button:hover{border-color:#3a4a68}
+  .primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .primary:hover{filter:brightness(1.06)}
+  h2{font-size:16px;margin:26px 0 10px;color:var(--soft);font-weight:700}
+  .cities{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{display:flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);cursor:pointer;font-size:13.5px}
+  .chip input{width:16px;height:16px;accent-color:var(--accent);margin:0}
+  .chip.on{border-color:#4a3a10;background:#241c08}
+  .list{margin-top:12px;display:grid;gap:8px}
+  .row{display:flex;align-items:center;gap:12px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+  .row.off{opacity:.55}
+  .city{flex:0 0 96px;font-weight:700;font-size:14.5px}
+  .tz{font-size:11.5px;color:var(--soft);display:block;font-weight:400}
+  .time{flex:1 1 auto;font-size:17px;font-variant-numeric:tabular-nums;font-weight:600}
+  .day{font-size:12px;color:var(--soft);margin-left:6px;font-weight:400}
+  .badge{font-size:11.5px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .b-ok{background:rgba(52,211,153,.14);color:var(--ok)}
+  .b-bad{background:rgba(248,113,113,.14);color:var(--bad)}
+  .hint{font-size:13px;color:var(--soft);margin-top:10px}
+  .copybar{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .prose{font-size:15px;color:#c7d2e8;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 18px}
+  .prose p{margin:12px 0}
+  .prose li{margin:6px 0}
+  .prose b{color:#fff}
+  footer{margin-top:28px;border-top:1px solid var(--line);padding-top:16px;font-size:13px;color:var(--soft);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  footer a{color:var(--accent);text-decoration:none;font-weight:600}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,14px);background:var(--accent);color:var(--accent-ink);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:700;opacity:0;pointer-events:none;transition:.2s;z-index:9}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  @media(max-width:430px){
+    .wrap{padding:18px 12px 48px}
+    h1{font-size:20px}
+    .city{flex:0 0 78px}
+    .time{font-size:16px}
+    .row{flex-wrap:wrap;gap:6px 10px}
+    .badge{margin-left:auto}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>约老外开会，怎么算时差才不出错？</h1>
+  <p class="answer"><b>别记「差 12 小时」，记 UTC。</b>北京时间固定 UTC+8；纽约平时 UTC−5、夏令时 UTC−4，伦敦从 UTC+0 变 UTC+1——所以你背下的时差每年会在三月和十一月各错一次。这个页面按日期查真实偏移，你只需要填一个时间和城市。</p>
+
+  <div class="panel">
+    <div class="grid">
+      <div class="field">
+        <label for="when">开会时间</label>
+        <input type="datetime-local" id="when">
+      </div>
+      <div class="field">
+        <label for="zone">在哪个时区</label>
+        <select id="zone"></select>
+      </div>
+      <button class="primary" id="now">用现在时间</button>
+    </div>
+    <p class="hint" id="hint">默认按你电脑的时区算。换城市后点一下「重新换算」。</p>
+  </div>
+
+  <h2>对方几点</h2>
+  <div class="cities" id="cities"></div>
+  <div class="list" id="list"></div>
+  <div class="copybar">
+    <button class="primary" id="copyAll">复制成会议通知</button>
+    <button id="copyShort">只复制一行</button>
+  </div>
+
+  <h2>为什么这样算不会错</h2>
+  <div class="prose">
+    <p><b>第一，用 UTC 当中转。</b>你只需要知道「北京时间 = UTC+8」，剩下交给每个城市自己的偏移。比如北京周五 21:00 = UTC 周五 13:00，纽约这时候是 UTC−5，也就是周五 08:00。</p>
+    <p><b>第二，夏令时按日期算，不按月份猜。</b>美国在三月第二个周日到十一月第一个周日用夏令时，欧洲比美国晚两周切换。这两个星期里，北京和纽约是 12 小时差，北京和伦敦是 7 小时差，凭记忆很容易差一小时，让对方在早上七点开会。</p>
+    <p><b>第三，看「在不在上班时间」而不是只看几点。</b>下面每个城市都标了对方是否在 9:00–18:00 之间。跨太平洋的会基本只有两个窗口：北京上午配美西前一天下午，或者北京晚上配美东早上。</p>
+    <p><b>不太好使的情况</b>：印度是 UTC+5:30、尼泊尔是 UTC+5:45，半小时时区这表能算但看数字会别扭；各国临时取消夏令时的新闻（比如某些年份的巴西、俄罗斯）浏览器用的是系统时区库，可能滞后一个版本。</p>
+  </div>
+
+  <footer>
+    <span>纯前端计算，不联网、不记录你填的时间</span>
+    <a href="../">← 全部作品</a>
+    <button id="buy" hidden style="min-height:0;padding:8px 14px;font-size:13px"></button>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const BUY_URL = ""; // 留空 = 内测免费
+const $ = (s)=>document.querySelector(s);
+
+const ZONES = [
+  {id:'Asia/Shanghai', name:'北京 / 上海', short:'北京'},
+  {id:'Asia/Tokyo', name:'东京', short:'东京'},
+  {id:'Asia/Seoul', name:'首尔', short:'首尔'},
+  {id:'Asia/Singapore', name:'新加坡', short:'新加坡'},
+  {id:'Asia/Kolkata', name:'孟买 / 新德里', short:'孟买'},
+  {id:'Asia/Dubai', name:'迪拜', short:'迪拜'},
+  {id:'Europe/Moscow', name:'莫斯科', short:'莫斯科'},
+  {id:'Europe/Berlin', name:'柏林 / 巴黎', short:'柏林'},
+  {id:'Europe/London', name:'伦敦', short:'伦敦'},
+  {id:'America/Sao_Paulo', name:'圣保罗', short:'圣保罗'},
+  {id:'America/New_York', name:'纽约 / 华盛顿', short:'纽约'},
+  {id:'America/Chicago', name:'芝加哥', short:'芝加哥'},
+  {id:'America/Denver', name:'丹佛', short:'丹佛'},
+  {id:'America/Los_Angeles', name:'洛杉矶 / 旧金山', short:'洛杉矶'},
+  {id:'Australia/Sydney', name:'悉尼', short:'悉尼'}
+];
+const DEFAULT_ON = ['Asia/Shanghai','Asia/Tokyo','Europe/London','America/New_York','America/Los_Angeles'];
+
+const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai';
+
+let selected = new Set(DEFAULT_ON);
+
+function toast(msg){
+  const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 1600);
+}
+
+// 把「某时区的墙上时间」转成真正的时间点：拿墙上时间去反推，多迭代两次以处理夏令时边界
+function zonedToInstant(str, tz){
+  const m = str.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  const [, y, mo, d, h, mi] = m.map(Number);
+  const utcGuess = Date.UTC(y, mo-1, d, h, mi);
+  let ts = utcGuess;
+  for (let i = 0; i < 3; i++){
+    const p = partsIn(new Date(ts), tz);
+    const asUTC = Date.UTC(p.y, p.mo-1, p.d, p.h, p.mi);
+    const delta = utcGuess - asUTC;
+    if (delta === 0) break;
+    ts += delta;
+  }
+  return new Date(ts);
+}
+
+function partsIn(date, tz){
+  const f = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: tz, hour12:false,
+    year:'numeric', month:'2-digit', day:'2-digit', weekday:'short',
+    hour:'2-digit', minute:'2-digit'
+  }).formatToParts(date);
+  const get = (t)=> (f.find(p=>p.type===t) || {}).value;
+  return {
+    y: Number(get('year')), mo: Number(get('month')), d: Number(get('day')),
+    h: Number(get('hour')) % 24, mi: Number(get('minute')),
+    wd: get('weekday')
+  };
+}
+
+function offsetLabel(date, tz){
+  const s = new Intl.DateTimeFormat('en-US', {timeZone: tz, timeZoneName:'shortOffset'})
+    .formatToParts(date).find(p=>p.type==='timeZoneName');
+  return s ? s.value.replace('GMT','UTC') : '';
+}
+
+function dayRelation(base, other){
+  const a = base.y*10000 + base.mo*100 + base.d;
+  const b = other.y*10000 + other.mo*100 + other.d;
+  if (a === b) return '';
+  // 判断相对哪天，用 UTC 日期装成毫秒比较
+  const da = Date.UTC(base.y, base.mo-1, base.d);
+  const db = Date.UTC(other.y, other.mo-1, other.d);
+  const days = Math.round((db - da) / 86400000);
+  if (days === 1) return '次日';
+  if (days === -1) return '前一天';
+  return (days > 0 ? '+' : '') + days + ' 天';
+}
+
+function render(){
+  const str = $('#when').value;
+  const zone = $('#zone').value;
+  const instant = str ? zonedToInstant(str, zone) : new Date();
+  if (!instant || isNaN(instant)) { $('#list').innerHTML = '<div class="hint">时间填得不对，试试重新选一次。</div>'; return; }
+
+  const base = partsIn(instant, zone);
+  const list = $('#list');
+  list.innerHTML = '';
+  ZONES.filter(z=> selected.has(z.id)).forEach(z=>{
+    const p = partsIn(instant, z.id);
+    const work = p.h >= 9 && p.h < 18;
+    const row = document.createElement('div');
+    row.className = 'row' + (work ? '' : ' off');
+    row.innerHTML =
+      '<div class="city">' + z.short + '<span class="tz">' + offsetLabel(instant, z.id) + '</span></div>' +
+      '<div class="time">' + String(p.h).padStart(2,'0') + ':' + String(p.mi).padStart(2,'0') +
+      '<span class="day">' + p.mo + '/' + p.d + ' ' + p.wd + ' ' + dayRelation(base, p) + '</span></div>' +
+      '<span class="badge ' + (work ? 'b-ok' : 'b-bad') + '">' + (work ? '上班时间' : '非工作时间') + '</span>';
+    list.appendChild(row);
+  });
+  if (!selected.size) list.innerHTML = '<div class="hint">上面至少选一个城市。</div>';
+}
+
+function meetingText(short){
+  const str = $('#when').value;
+  const zone = $('#zone').value;
+  const instant = str ? zonedToInstant(str, zone) : new Date();
+  const baseZ = ZONES.find(z=>z.id===zone);
+  const baseParts = partsIn(instant, zone);
+  const pad = (n)=>String(n).padStart(2,'0');
+  const head = '会议时间：' + baseParts.y + '-' + pad(baseParts.mo) + '-' + pad(baseParts.d) + ' ' +
+    pad(baseParts.h) + ':' + pad(baseParts.mi) + ' ' + (baseZ ? baseZ.short + '时间' : zone) +
+    '（' + offsetLabel(instant, zone) + '）';
+  const rows = ZONES.filter(z=> selected.has(z.id)).map(z=>{
+    const p = partsIn(instant, z.id);
+    return '· ' + z.short + ' ' + pad(p.h) + ':' + pad(p.mi) + '（' + p.mo + '/' + p.d + ' ' + p.wd + '）';
+  });
+  return short ? head + ' / ' + rows.map(r=>r.replace('· ','')).join(' / ') : head + '\n' + rows.join('\n');
+}
+
+async function copy(text){
+  try { await navigator.clipboard.writeText(text); toast('已复制'); }
+  catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.left='-9999px';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy'); ta.remove();
+    toast(ok ? '已复制' : '复制失败，请手动选中');
+  }
+}
+
+function buildCityChips(){
+  const box = $('#cities');
+  box.innerHTML = '';
+  ZONES.forEach(z=>{
+    const lab = document.createElement('label');
+    lab.className = 'chip' + (selected.has(z.id) ? ' on' : '');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = selected.has(z.id);
+    cb.addEventListener('change', ()=>{
+      if (cb.checked) selected.add(z.id); else selected.delete(z.id);
+      lab.classList.toggle('on', cb.checked);
+      render();
+    });
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(z.name));
+    box.appendChild(lab);
+  });
+}
+
+function buildZoneOptions(){
+  const sel = $('#zone');
+  const all = ZONES.slice();
+  if (!all.some(z=>z.id===localZone)) all.unshift({id:localZone, name:'本机时区（' + localZone + '）', short:'本机'});
+  all.forEach(z=>{
+    const o = document.createElement('option');
+    o.value = z.id; o.textContent = z.name;
+    sel.appendChild(o);
+  });
+  const guess = all.find(z=>z.id===localZone) || all[0];
+  sel.value = guess.id;
+}
+
+function initWhen(){
+  const d = new Date(Date.now() + 60*60*1000);
+  const pad = (n)=>String(n).padStart(2,'0');
+  $('#when').value = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+$('#when').addEventListener('change', render);
+$('#when').addEventListener('input', render);
+$('#zone').addEventListener('change', render);
+$('#now').addEventListener('click', ()=>{
+  const d = new Date();
+  const pad = (n)=>String(n).padStart(2,'0');
+  $('#when').value = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  render();
+});
+$('#copyAll').addEventListener('click', ()=> copy(meetingText(false)));
+$('#copyShort').addEventListener('click', ()=> copy(meetingText(true)));
+
+(function init(){
+  buildZoneOptions();
+  initWhen();
+  buildCityChips();
+  render();
+  const btn = $('#buy');
+  btn.hidden = false;
+  if (BUY_URL){ btn.textContent = '买断 · $7'; btn.addEventListener('click', ()=>window.open(BUY_URL,'_blank')); }
+  else { btn.textContent = '内测免费'; btn.disabled = true; btn.style.opacity=.75; }
+})();
+</script>
+</body>
+</html>

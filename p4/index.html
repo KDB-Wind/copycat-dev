@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>图片压缩到 100KB 以内 — 报名系统上传失败时用，照片不糊</title>
+<meta name="description" content="考试报名、事业单位上传照片卡在 100KB / 200KB？在浏览器里把照片压到指定大小，不糊、不上传、不用注册。">
+<meta name="theme-color" content="#f5f6f8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232563eb'/%3E%3Ctext x='50' y='70' font-size='52' text-anchor='middle' fill='%23ffffff'%3E%E5%8E%8B%3C/text%3E%3C/svg%3E">
+<meta property="og:title" content="图片压缩到 100KB 以内 — 报名照片上传失败时用">
+<meta property="og:description" content="把照片压到指定 KB，浏览器本地处理，不糊不上传。">
+<style>
+  :root{--bg:#f5f6f8;--ink:#111827;--soft:#6b7280;--line:#e5e7eb;--card:#fff;--accent:#2563eb;--accent2:#eff6ff;--ok:#059669;--warn:#b45309;--bad:#b91c1c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:26px 16px 60px}
+  h1{font-size:24px;line-height:1.35;margin:0 0 10px;letter-spacing:-.3px}
+  .answer{font-size:15px;color:#374151;background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 16px;margin:0 0 18px}
+  .answer b{color:var(--ink)}
+  .tool{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .drop{border:2px dashed #cbd5e1;border-radius:12px;padding:24px 16px;text-align:center;color:var(--soft);cursor:pointer;transition:.15s}
+  .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent2);color:var(--accent)}
+  .drop b{color:var(--ink);display:block;font-size:15px;margin-bottom:4px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  label.f{font-size:13px;font-weight:700;color:var(--soft)}
+  input[type=number],select{min-height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font-family:inherit;font-size:15px;background:#fff;color:var(--ink);outline:none}
+  input[type=number]{width:100px}
+  input:focus,select:focus{border-color:var(--accent)}
+  button{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);font-family:inherit;font-size:15px;font-weight:600;line-height:1;cursor:pointer}
+  button:hover{background:#f8fafc}
+  .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .primary:hover{filter:brightness(1.07)}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  .status{font-size:14px;color:var(--soft);margin-top:12px;min-height:20px}
+  .result{margin-top:14px;display:none;grid-template-columns:128px 1fr;gap:14px;align-items:start}
+  .result.on{display:grid}
+  .thumb{width:128px;height:128px;border-radius:12px;border:1px solid var(--line);object-fit:cover;background:#f3f4f6}
+  .meta{font-size:14px;line-height:1.9}
+  .meta b{font-size:16px}
+  .good{color:var(--ok);font-weight:700}
+  .warn{color:var(--warn);font-weight:700}
+  .bad{color:var(--bad);font-weight:700}
+  h2{font-size:17px;margin:30px 0 10px}
+  .prose{font-size:15px;color:#374151;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 18px}
+  .prose p{margin:12px 0}
+  .prose ul{margin:10px 0;padding-left:20px}
+  .prose li{margin:6px 0}
+  .prose b{color:var(--ink)}
+  footer{margin-top:28px;border-top:1px solid var(--line);padding-top:16px;font-size:13px;color:var(--soft);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  footer a{color:var(--accent);text-decoration:none;font-weight:600}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,14px);background:#111827;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:9}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  @media(max-width:420px){ .wrap{padding:18px 12px 48px} h1{font-size:20px} .result.on{grid-template-columns:1fr} .thumb{width:100%;height:180px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>照片上传卡在「不能超过 100KB」，怎么压才不糊？</h1>
+  <p class="answer"><b>先把长边缩到 800–1200 像素，再降 JPEG 质量</b>——顺序反了就会糊成一团：直接压质量会把细节抹平，先缩尺寸反而更清楚。下面这个工具就是按这个顺序自动试，直到文件小于你要的 KB。全程在你自己浏览器里算，照片不会上传到任何服务器。</p>
+
+  <div class="tool">
+    <div class="drop" id="drop">
+      <b>点这里选照片，或把照片拖进来</b>
+      支持 JPG / PNG / WebP；iPhone 的 HEIC 请先在相册里「存储为 JPG」
+    </div>
+    <input type="file" id="file" accept="image/*" hidden>
+
+    <div class="row">
+      <span class="f">目标大小</span>
+      <input type="number" id="target" value="100" min="10" max="5000" step="10">
+      <span class="f">KB</span>
+      <span class="f" style="margin-left:6px">格式</span>
+      <select id="format">
+        <option value="image/jpeg">JPG（兼容最好）</option>
+        <option value="image/webp">WebP（同清晰度更小）</option>
+      </select>
+    </div>
+    <div class="row">
+      <button class="primary" id="go" disabled>开始压缩</button>
+      <button id="reset" disabled>换一张</button>
+    </div>
+    <div class="status" id="status">还没有选照片。</div>
+
+    <div class="result" id="result">
+      <img class="thumb" id="thumb" alt="压缩后的预览">
+      <div class="meta">
+        <div id="sizes"></div>
+        <div id="dims"></div>
+        <div class="row" style="margin-top:8px">
+          <button class="primary" id="download">下载这张</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>为什么报名系统总要卡 100KB</h2>
+  <div class="prose">
+    <p>大部分人事考试、事业单位、资格证的报名系统是十多年前的老架构，表单一次要收几千人，服务器按「每人 100KB」估容量，于是把上限钉死。所以这不是你的照片有问题，是系统还在用二十年前的带宽预算。</p>
+    <p><b>能过的做法</b>：长边 800–1200 像素、JPEG 质量 0.6–0.8，证件照通常落在 40–90KB，人脸细节保得住。半身照、全身照要多留一点，压到 150KB 左右更稳。</p>
+    <p><b>常见误区</b>：</p>
+    <ul>
+      <li><b>只改扩展名不算压缩</b>——把 .png 改成 .jpg，文件一个字节都没少，系统照样拒。</li>
+      <li><b>截图再截图</b>会让照片变灰、出现摩尔纹，人脸识别容易失败。</li>
+      <li><b>用微信「原图」转发</b>再另存，尺寸没变、体积可能更大。</li>
+    </ul>
+    <p><b>什么时候这个工具也不好使</b>：原图本身已经压得很狠（比如从聊天记录里存下来的），再压会出块状；需要透明背景的 PNG 请选 WebP，选 JPG 会给你填白底；iPhone 的 HEIC 浏览器解不开，要先转 JPG。</p>
+  </div>
+
+  <footer>
+    <span>本地处理，照片不上传</span>
+    <a href="../">← 全部作品</a>
+    <button id="buy" hidden style="min-height:0;padding:8px 14px;font-size:13px"></button>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const BUY_URL = ""; // 留空 = 内测免费
+const $ = (s)=>document.querySelector(s);
+let srcFile = null, srcImg = null, outBlob = null, outName = '';
+
+function toast(msg){
+  const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 1700);
+}
+function kb(n){ return (n/1024).toFixed(n < 10240 ? 1 : 0); }
+
+$('#drop').addEventListener('click', ()=> $('#file').click());
+$('#drop').addEventListener('dragover', (e)=>{ e.preventDefault(); $('#drop').classList.add('over'); });
+$('#drop').addEventListener('dragleave', ()=> $('#drop').classList.remove('over'));
+$('#drop').addEventListener('drop', (e)=>{
+  e.preventDefault(); $('#drop').classList.remove('over');
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) load(f);
+});
+$('#file').addEventListener('change', (e)=>{ const f = e.target.files[0]; if (f) load(f); });
+
+function load(file){
+  if (!file.type.startsWith('image/')){ toast('这不是图片文件'); return; }
+  if (file.size > 30 * 1024 * 1024){ toast('超过 30MB，浏览器可能算不动'); }
+  srcFile = file;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = ()=>{
+    srcImg = img;
+    $('#status').textContent = '已载入：' + file.name + '，' + kb(file.size) + ' KB，' + img.naturalWidth + '×' + img.naturalHeight + '。点「开始压缩」。';
+    $('#go').disabled = false; $('#reset').disabled = false;
+    $('#result').classList.remove('on');
+    URL.revokeObjectURL(url);
+  };
+  img.onerror = ()=>{
+    $('#status').textContent = '这张图浏览器解不开。iPhone 的 HEIC 请先在相册里转成 JPG 再试。';
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+
+$('#reset').addEventListener('click', ()=>{
+  srcFile = null; srcImg = null; outBlob = null; outName = '';
+  $('#file').value = ''; $('#go').disabled = true; $('#reset').disabled = true;
+  $('#result').classList.remove('on');
+  $('#status').textContent = '还没有选照片。';
+  $('#drop').scrollIntoView({block:'center'});
+});
+
+function canvasToBlob(canvas, type, quality){
+  return new Promise((resolve)=> canvas.toBlob(resolve, type, quality));
+}
+
+async function compress(img, maxBytes, type){
+  // 第 1 步：从大往小试尺寸；每个尺寸里二分质量，取第一个达标的结果
+  const sizes = [];
+  const longest = Math.max(img.naturalWidth, img.naturalHeight);
+  for (let target = Math.min(longest, 2000); target >= 240; target = Math.round(target * 0.8)){
+    sizes.push(target);
+  }
+  let best = null, fallback = null;
+  for (const target of sizes){
+    const scale = Math.min(1, target / longest);
+    const w = Math.max(1, Math.round(img.naturalWidth * scale));
+    const h = Math.max(1, Math.round(img.naturalHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (type === 'image/jpeg'){ ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,h); }
+    ctx.drawImage(img, 0, 0, w, h);
+
+    let lo = 0.4, hi = 0.95, found = null;
+    for (let i = 0; i < 7; i++){
+      const q = (lo + hi) / 2;
+      const blob = await canvasToBlob(canvas, type, q);
+      if (!blob) break;
+      if (blob.size <= maxBytes){ found = {blob, q, w, h}; lo = q; }
+      else { hi = q; }
+    }
+    if (found && !fallback) fallback = found;
+    if (found && found.q >= 0.7){ best = found; break; } // 质量够高就停，别为了像素数把脸压糊
+    // 这个尺寸连质量 0.4 都塞不下，继续缩小
+    const last = await canvasToBlob(canvas, type, 0.4);
+    if (last && last.size <= maxBytes && !fallback) fallback = {blob:last, q:0.4, w, h};
+  }
+  return best || fallback;
+}
+
+$('#go').addEventListener('click', async ()=>{
+  if (!srcImg){ toast('先选一张照片'); return; }
+  const target = Math.max(10, Math.min(5000, Number($('#target').value) || 100));
+  const maxBytes = target * 1024;
+  const type = $('#format').value;
+  $('#go').disabled = true;
+  $('#status').textContent = '正在试不同的尺寸和质量……';
+
+  try {
+    const t0 = performance.now();
+    const best = await compress(srcImg, maxBytes, type);
+    const ms = Math.round(performance.now() - t0);
+    if (!best){
+      $('#status').textContent = '压不到 ' + target + 'KB。这张图可能本身细节太多，试试把目标调到 ' + (target * 2) + 'KB，或换一张更简单的照片。';
+      $('#go').disabled = false;
+      return;
+    }
+    outBlob = best.blob;
+    const ext = type === 'image/webp' ? 'webp' : 'jpg';
+    const base = (srcFile.name || 'photo').replace(/\.[^.]+$/, '');
+    outName = base + '-' + target + 'kb.' + ext;
+    const url = URL.createObjectURL(outBlob);
+    $('#thumb').src = url;
+    $('#result').classList.add('on');
+    const diff = Math.round((1 - outBlob.size / srcFile.size) * 100);
+    $('#sizes').innerHTML = '<b>' + kb(srcFile.size) + ' KB → ' + kb(outBlob.size) + ' KB</b> ' +
+      '<span class="' + (outBlob.size <= maxBytes ? 'good' : 'bad') + '">' + (outBlob.size <= maxBytes ? '达标' : '超出') + '（目标 ' + target + ' KB）</span>' +
+      '<span style="color:#6b7280"> · 省了 ' + (diff > 0 ? diff + '%' : '0%') + '</span>';
+    $('#dims').textContent = srcImg.naturalWidth + '×' + srcImg.naturalHeight + ' → ' + best.w + '×' + best.h +
+      ' · 质量 ' + best.q.toFixed(2) + ' · ' + ms + 'ms 算完';
+    $('#status').textContent = '好了。点「下载这张」存到本地，再拿去上传。';
+  } catch(err){
+    $('#status').textContent = '压缩出错了：' + (err && err.message ? err.message : String(err)) + '。换一张图再试，或把目标调大一点。';
+  }
+  $('#go').disabled = false;
+});
+
+$('#download').addEventListener('click', ()=>{
+  if (!outBlob){ toast('还没有结果'); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(outBlob);
+  a.download = outName;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+  toast('已开始下载');
+});
+
+(function init(){
+  const btn = $('#buy');
+  btn.hidden = false;
+  if (BUY_URL){ btn.textContent = '买断 · $9'; btn.addEventListener('click', ()=>window.open(BUY_URL,'_blank')); }
+  else { btn.textContent = '内测免费'; btn.disabled = true; btn.style.opacity=.75; }
+})();
+</script>
+</body>
+</html>
