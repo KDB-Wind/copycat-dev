@@ -74,6 +74,11 @@ R3 的前提是你自己写的「6 个页面 0 个入口，第 7 个产品的边
 
 改这一轮暴露了一个流程问题：p1/p6 的按钮尺寸写在 CSS 类里、p2–p5 写在行内 `style` 里，批量替换字符串时漏了两个文件，靠复查才发现。已经二次审计过。
 
+## 收尾（主理人 11-27 指示后追加）
+
+1. **p6 的 canonical 在产物重建时丢了**：`p6/index.html` 是从 `_shell.html` 拼出来的，我早先只往产物里加过 canonical，后来一次重建就把它覆盖掉了。已把 canonical 写进 `_shell.html`，并在 `.check/build-p6.js` 里加了三条「shell 必须包含」的断言（canonical / UTF-8 切换 / primary hover 修复），以后重建漏了会直接报错而不是静默上线。复查：7 页 canonical 现在都在。
+2. **内部文件移出公开仓库**：`git rm --cached` 掉 `GOAL.md`、`MSG*.txt`、`ITEM-NOTE*.txt`、`ITEM-CLOSE.txt`、`REPLY-*.txt`，写进 `.gitignore`，提交信息 `chore: 内部指令移出公开仓库`。**没有改写历史**（按指示，10 个提交里有几个 44 字节的指令文件，不值得 filter-repo）。本地文件都还在，任务投递不受影响。GitHub 上 `GOAL.md`、`MSG.txt` 现在返回 404，站点 200 正常。
+
 ## 卡在哪
 
 1. **`robots.txt` / `sitemap.xml` 第一次 curl 是 404**：文件已经 commit 且 `gh api contents` 能读到（robots.txt 84 字节），是 Pages 构建还没跟上。等了 30 秒后 200。这说明「push 完立刻 curl」会误判，R1 的自检口径要改成「等构建状态 `built` 再验」。
