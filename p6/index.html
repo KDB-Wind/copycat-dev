@@ -2409,6 +2409,11 @@ const BUY_URL = ""; // 留空 = 内测免费
 const $ = (s)=>document.querySelector(s);
 let last = null; // {count, scale, margin}
 
+// 上游默认 stringToBytes 不是 UTF-8，中文会被编成乱码；这里显式切到它自带的 UTF-8 实现
+if (typeof qrcode === 'function' && qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']){
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+}
+
 function toast(msg){
   const el = $('#toast'); el.textContent = msg; el.classList.add('show');
   clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 1500);

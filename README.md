@@ -17,7 +17,9 @@
 
 `p6/index.html` 内联了 [kazuhikoarase/qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator)（MIT，Copyright © 2009 Kazuhiko Arase）。许可证原文在 `LICENSE-qrcode-generator.txt`，改动说明在 `NOTICE.md`。
 
-**改了哪几处**：只内联，没改编码算法；新增的是外层界面、尺寸/容错/留白三个控件、PNG 与 SVG 导出函数、页面文案。上游文件末尾的 AMD/CommonJS 包装原样保留（浏览器下不生效）。
+**改了哪几处**：只内联，没改编码算法；新增的是外层界面、尺寸/容错/留白三个控件、PNG 与 SVG 导出函数、页面文案。**另外把 `qrcode.stringToBytes` 切到了上游自带的 UTF-8 实现**——默认实现不是 UTF-8，中文会被编成乱码。上游文件末尾的 AMD/CommonJS 包装原样保留（浏览器下不生效）。
+
+`p6/index.html` 是产物：改界面请改 `p6/_shell.html`，再跑 `.check/build-p6.js` 重新拼（脚本在 `.check/`，已 gitignore；内容很短，见 `NOTICE.md` 的说明，可以照着重写）。
 
 其余五个页面是手写原生 JS，零依赖。
 
