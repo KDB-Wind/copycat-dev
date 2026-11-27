@@ -23,7 +23,7 @@ P5 tzmeet（跨国会议时间） | 状态: 已上线 | URL: https://kdb-wind.gi
 P6 qrstatic（二维码） | 状态: 已上线 | URL: https://kdb-wind.github.io/copycat-dev/p6/
   一句话: 给要印海报 / 贴纸 / 名片的店主与活动运营，静态码、不注册、不加水印。
   数据: 非 stringer；搜索证据见 `## 需求证据`（ME-QR 博客 / Proton / GenQRCode）
-  自检: 5/5。①文本框 + 尺寸/容错/留白三个控件 ②`https://kdb-wind.github.io/copycat-dev/` → 29×29 模块，导出 999×999px，画布渲染正常 ③下载 PNG（toBlob）与 SVG（矢量，印刷用）都能触发 ④scrollWidth=375（docs/shots/p6-375.png）⑤console/errors 空
+  自检: 5/5。①文本框 + 尺寸/容错/留白三个控件 ②线上页面生成三类内容各一张，用 OpenCV `QRCodeDetector` 解码，**三种都逐字对上**：URL（42 字符）/ 中文 20 字 / Wi-Fi 配置串 ③下载 PNG（toBlob）与 SVG（矢量）都能触发 ④scrollWidth=375（docs/shots/p6-375.png）⑤六个页面 console/errors 全空
   下一步: 小改——能扫、能印就够；下一步只补「打印尺寸换算 cm」，别再堆样式
 
 ## 需求证据
@@ -52,10 +52,10 @@ P6 qrstatic（二维码） | 状态: 已上线 | URL: https://kdb-wind.github.io
 
 - 用的是 [kazuhikoarase/qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator)，取的是 `js/dist/qrcode.js`。
 - **读了 LICENSE 原文**（不是看徽章）：`MIT License / Copyright (c) 2009 Kazuhiko Arase / Permission is hereby granted, free of charge...`，逐字存进仓库根 `LICENSE-qrcode-generator.txt`。
-- 仓库根有 `NOTICE.md`：写清用在哪、哪个文件、改动是什么（只内联，未改算法，AMD 包装原样保留）。
-- `README.md` 里有一段「改了哪几处」，并且说明了想换库时只要保住 `qrcode/addData/make/getModuleCount/isDark` 五个方法。
+- 仓库根有 `NOTICE.md`：写清用在哪、哪个文件、改动是什么（只内联、未改算法、AMD 包装原样保留、**把 `stringToBytes` 切到上游自带的 UTF-8 实现**）。
+- `README.md` 里有一段「改了哪几处」，并且说明了想换库时只要保住 `qrcode/addData/make/getModuleCount/isDark` 五个（外加 `stringToBytes` 的编码选择）。
 - 页脚保留了作者署名和项目链接——MIT 要求保留版权与许可声明。
-- 结论：这条路技术上成立，但**它只解决「不用从零写编码器」，不解决流量**；p6 能不能起量跟这个库无关。
+- 结论：这条路技术上成立，但**它只解决「不用从零写编码器」，不解决流量**；p6 能不能起量跟这个库无关。而且读文档这一步不能省——见下面第 6 条。
 
 ## 卡在哪
 
@@ -64,3 +64,7 @@ P6 qrstatic（二维码） | 状态: 已上线 | URL: https://kdb-wind.github.io
 3. **繁简字表第一次写错了对齐**：字表是一整串两字一对，我在 `專专` 后面多打了一个「业」，导致后面**全部**错位一位（`這`→`这这`、`業`→null）。用「有没有简体字被当成 key」扫出来，修完是 1076 对；干/台/里/只/面 这类多对一的字故意不收，页面文案写明了这是常用字表、不是完整 OpenCC。
 4. **P6 的构建不是纯手写**：`p6/index.html` 由 `p6/_shell.html` + 上游 `qrcode.js` 用 `.check/build-p6.js` 拼出来，脚本在 `.check/`（已 gitignore）。也就是说仓库里 `p6/index.html` 是产物，改的时候要改 `_shell.html` 再重跑——这个约定我写进了 README，但确实比别的页面多一步。
 5. **仍有没做的**：支付位还是空串（`BUY_URL=""`，三页显示「内测免费」）；P4 不支持 HEIC；P6 没有动态码 / 扫码统计；三个新页面都只有文案，没有做过任何真实流量的验证。
+6. **用了开源库不等于能用**：p6 第一版上线后中文二维码是**错的**——`qrcode-generator` 的默认 `stringToBytes` 不是 UTF-8，中文被编成 2 个字节的乱码，肉眼看不出，扫码出来是 `Ù/`。修法是把库自带的 `stringToBytesFuncs['UTF-8']` 显式赋给 `qrcode.stringToBytes`。
+   发现方式：把画布 `toDataURL` 存成 PNG，用 OpenCV `QRCodeDetector` 解码比对原文；同时用 `python-qrcode` 生成同内容参照码做对照，确认不是解码器的锅（参照码能解出中文，我的不能）。修完三类内容（URL / 中文 / Wi-Fi）三种都逐字对上，线上页面同样复查过。
+   这一条是今晚最有价值的发现：**MIT 库 + LICENSE 读对了，也不代表行为对**，不跑一次真实解码就会带着乱码上线。
+7. **P5 的排版改了一次**：手机上 15 个城市开关把结果挤到首屏之外，把结果列表移到城市选择之前，改完 375px 下第一屏能直接看到时间。
