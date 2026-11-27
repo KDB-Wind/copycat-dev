@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>文本整理器 — 粘贴中文乱文字，一键整理干净</title>
+<meta name="description" content="把从 Word、微信、PDF 复制出来的文字整理干净：中文标点、全半角、中英文间距、多余空行。免费、无需登录、不上传。">
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1d222b; --line:#2b313d;
+    --fg:#e8ecf3; --muted:#98a2b3; --accent:#5eead4; --accent-ink:#062e2a;
+    --warn:#fbbf24; --ok:#34d399;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--fg);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:20px 16px 56px}
+  header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(94,234,212,.12)}
+  h1{font-size:20px;margin:0;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:14px;margin:4px 0 18px}
+  .sub b{color:var(--fg);font-weight:600}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .fieldhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+  .fieldhead span{font-size:13px;color:var(--muted)}
+  textarea{
+    width:100%;min-height:150px;resize:vertical;background:var(--panel2);color:var(--fg);
+    border:1px solid var(--line);border-radius:10px;padding:12px;
+    font:15px/1.65 inherit;outline:none;
+  }
+  textarea:focus{border-color:var(--accent)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button{
+    min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--fg);font:600 15px/1 inherit;cursor:pointer;
+    transition:.15s;
+  }
+  button:hover{border-color:#3c4553}
+  button:active{transform:translateY(1px)}
+  .primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .primary:hover{filter:brightness(1.06)}
+  .ghost{background:transparent}
+  .rules{margin:16px 0 0;display:grid;gap:8px}
+  .rule{display:flex;align-items:flex-start;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+  .rule input{margin:4px 0 0;width:18px;height:18px;accent-color:var(--accent);flex:0 0 auto}
+  .rule .t{font-size:14px}
+  .rule .d{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .rule .n{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap;padding-top:2px}
+  .rule .n.on{color:var(--ok)}
+  .stats{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:12px}
+  .stats b{color:var(--fg);font-weight:600}
+  .out{white-space:pre-wrap;word-break:break-word;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;min-height:110px;font:15px/1.65 inherit}
+  .out.empty{color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:#0b1220;color:var(--fg);
+    border:1px solid var(--accent);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:9}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  footer a{color:var(--accent);text-decoration:none}
+  .buy{min-height:0;padding:8px 14px;font-size:13px}
+  .limits{font-size:13px;color:var(--muted);margin-top:14px;line-height:1.7}
+  .limits b{color:var(--warn);font-weight:600}
+  @media (max-width:420px){
+    .wrap{padding:16px 12px 48px}
+    h1{font-size:18px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><i class="dot"></i><h1>文本整理器</h1></header>
+  <p class="sub">从 Word、微信、PDF 里复制出来的文字，标点是乱的、空格是多的。粘进来，<b>一键理顺</b>，直接就能发。全部在浏览器里处理，<b>不上传</b>。</p>
+
+  <div class="card">
+    <div class="fieldhead"><strong>① 粘贴原文</strong><span id="counter">0 字</span></div>
+    <textarea id="input" placeholder="把乱的那段文字粘在这里……&#10;&#10;例如：昨天  我去了一趟超市,买了两瓶水 .顺便看了下 iPhone   15 的价格"></textarea>
+    <div class="row">
+      <button class="primary" id="run">一键整理</button>
+      <button class="ghost" id="sample">用示例试一下</button>
+      <button class="ghost" id="clear">清空</button>
+    </div>
+  </div>
+
+  <div class="rules" id="rules">
+    <label class="rule"><input type="checkbox" data-rule="punct" checked><span><span class="t">中文标点</span><span class="d">句子里夹的 , . ? ! : ; ( ) 换成全角，英文单词和数字里的不动</span></span><span class="n" data-n="punct"></span></label>
+    <label class="rule"><input type="checkbox" data-rule="space" checked><span><span class="t">中文间距</span><span class="d">删掉汉字之间多打的空格，中英文、数字之间补一个空格</span></span><span class="n" data-n="space"></span></label>
+    <label class="rule"><input type="checkbox" data-rule="dup" checked><span><span class="t">重复标点</span><span class="d">，，。。 这种连打的合并成一个</span></span><span class="n" data-n="dup"></span></label>
+    <label class="rule"><input type="checkbox" data-rule="blank" checked><span><span class="t">空行与行尾</span><span class="d">连续空行压成一个，去掉每行末尾的空格</span></span><span class="n" data-n="blank"></span></label>
+    <label class="rule"><input type="checkbox" data-rule="multi" checked><span><span class="t">多余空格</span><span class="d">连续多个空格合成一个（代码缩进除外）</span></span><span class="n" data-n="multi"></span></label>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="fieldhead"><strong>② 整理结果</strong><span id="delta">—</span></div>
+    <div class="out empty" id="output">点上面的「一键整理」，结果显示在这里。</div>
+    <div class="row">
+      <button class="primary" id="copy">复制结果</button>
+      <button class="ghost" id="useAsInput">拿结果继续整理</button>
+    </div>
+    <div class="stats">
+      <span>原文字数 <b id="s-before">0</b></span>
+      <span>整理后 <b id="s-after">0</b></span>
+      <span>共改动 <b id="s-changes">0</b> 处</span>
+    </div>
+  </div>
+
+  <div class="limits">
+    <b>什么时候不好使：</b>代码块会被当成普通文本处理（缩进规则默认已避开行首空格，但引号不会换）；中英文混排的专有名词如果本来就该连着写，可能被加空格；整段只有一个句号时看不出差别。
+  </div>
+
+  <footer>
+    <span>本地处理，无后端、无账号、不收集内容</span>
+    <a href="../">← 全部三件</a>
+    <button class="buy" id="buy" hidden></button>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const BUY_URL = ""; // 收款链接（Lemon Squeezy checkout link）。留空 = 内测免费
+
+const $ = (s) => document.querySelector(s);
+const input = $('#input'), output = $('#output');
+const HAN = /[\u3400-\u4dbf\u4e00-\u9fff]/;              // 汉字
+const CNP = /[\u3000-\u303f\uff01-\uff65]/;               // 中文标点
+const NEAR = /[\u3400-\u4dbf\u4e00-\u9fff\u3000-\u303f\uff01-\uff65]/;
+
+// 中文标点：只在"中文语境"里换，避免动到 3.14 / hello,world / a@b.co
+function fixPunct(text){
+  let n = 0;
+  let t = text.replace(/\.{3,}/g, (m)=>{ n++; return '…'; }); // 三个点 → 省略号
+  const map = {',':'，','.':'。','?':'？','!':'！',':':'：',';':'；','(':'（',')':'）'};
+  const chars = Array.from(t);
+  const prevChar = (i)=>{ for (let j=i-1;j>=0;j--){ if (chars[j] !== ' ' && chars[j] !== '\t') return chars[j]; } return ''; };
+  const nextChar = (i)=>{ for (let j=i+1;j<chars.length;j++){ if (chars[j] !== ' ' && chars[j] !== '\t') return chars[j]; } return ''; };
+  for (let i=0;i<chars.length;i++){
+    const c = chars[i];
+    if (!map[c]) continue;
+    const prev = prevChar(i), next = nextChar(i);
+    const nearCJK = NEAR.test(prev) || NEAR.test(next);
+    if (!nearCJK) continue;
+    if (c === '.' && /[0-9]/.test(prev) && /[0-9]/.test(next)) continue; // 小数
+    if (c === ':' && /[0-9]/.test(prev) && /[0-9]/.test(next)) continue; // 时间 / 比例
+    if (c === '(' && /[A-Za-z0-9]/.test(next)) continue;
+    chars[i] = map[c];
+    n++;
+  }
+  return [chars.join(''), n];
+}
+
+function fixSpace(text){
+  let n = 0;
+  let t = text;
+  // 汉字/中文标点 之间的空格删掉（循环到不再变化，处理"你 说 呢"这种连续情况）
+  const re = /([\u3400-\u4dbf\u4e00-\u9fff\u3000-\u303f\uff01-\uff65])[ \t]+([\u3400-\u4dbf\u4e00-\u9fff\u3000-\u303f\uff01-\uff65])/g;
+  for (let guard=0; guard<50; guard++){
+    let hits = 0;
+    t = t.replace(re, (m,a,b)=>{ hits++; return a+b; });
+    n += hits;
+    if (!hits) break;
+  }
+  // 中文 ↔ 英数 之间补一个空格
+  t = t.replace(/([\u4e00-\u9fff])([A-Za-z0-9])/g, (m,a,b)=>{n++;return a+' '+b;});
+  t = t.replace(/([A-Za-z0-9%])([\u4e00-\u9fff])/g, (m,a,b)=>{n++;return a+' '+b;});
+  return [t, n];
+}
+
+function fixDup(text){
+  let n = 0;
+  const t = text
+    .replace(/([，。；：！？、…])\1+/g, (m,a)=>{n+=m.length-1;return a;})
+    .replace(/[，、](?=[。！？…])/g, (m)=>{n++;return '';})
+    .replace(/。{2,}/g, (m)=>{n+=m.length-1;return '。';});
+  return [t, n];
+}
+
+function fixBlank(text){
+  let n = 0;
+  let t = text.replace(/[ \t]+$/gm, (m)=>{n++;return '';});
+  t = t.replace(/\n{3,}/g, (m)=>{n+=m.length-2;return '\n\n';});
+  return [t, n];
+}
+
+function fixMulti(text){
+  let n = 0;
+  const t = text.replace(/([^\n])[ ]{2,}/g, (m,a)=>{n++;return a+' ';});
+  return [t, n];
+}
+
+const RULES = {punct:fixPunct, space:fixSpace, dup:fixDup, blank:fixBlank, multi:fixMulti};
+const ORDER = ['punct','space','dup','blank','multi'];
+
+function enabled(){
+  return ORDER.filter(k => document.querySelector('input[data-rule="'+k+'"]').checked);
+}
+
+function tidy(){
+  const src = input.value;
+  if (!src.trim()) { toast('先粘一段文字进来'); return; }
+  let t = src;
+  const counts = {};
+  enabled().forEach(k => {
+    const [next, n] = RULES[k](t);
+    t = next; counts[k] = n;
+  });
+  ORDER.forEach(k => {
+    const el = document.querySelector('[data-n="'+k+'"]');
+    const c = counts[k];
+    el.textContent = (c === undefined) ? '' : (c > 0 ? '改 ' + c + ' 处' : '无改动');
+    el.className = 'n' + (c > 0 ? ' on' : '');
+  });
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  output.textContent = t;
+  output.classList.remove('empty');
+  const before = src.replace(/\s/g,'').length;
+  const after = t.replace(/\s/g,'').length;
+  $('#s-before').textContent = before;
+  $('#s-after').textContent = after;
+  $('#s-changes').textContent = total;
+  $('#delta').textContent = total ? '改了 ' + total + ' 处' : '已经很干净了';
+  $('#counter').textContent = Array.from(src).length + ' 字';
+  localStorage.setItem('tidy.rules', JSON.stringify(enabled()));
+}
+
+function toast(msg){
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove('show'), 1600);
+}
+
+async function copyText(text){
+  if (!text || text === '点上面的「一键整理」，结果显示在这里。') { toast('没有可复制的内容'); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('已复制');
+  } catch(e) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.left='-9999px';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    toast(ok ? '已复制' : '复制失败，请手动全选');
+  }
+}
+
+$('#run').addEventListener('click', tidy);
+$('#sample').addEventListener('click', ()=>{
+  input.value = '昨天  我去了一趟超市,买了两瓶水 .顺便看了一下  iPhone   15 的价格,\n居然要 5999 元?!\n\n\n\n说实话,我觉得这个价格  ,  有点离谱...\n你 说 呢?（图片来自 官网）';
+  $('#counter').textContent = Array.from(input.value).length + ' 字';
+  tidy();
+});
+$('#clear').addEventListener('click', ()=>{
+  input.value=''; output.textContent='点上面的「一键整理」，结果显示在这里。';
+  output.classList.add('empty'); $('#counter').textContent='0 字';
+  $('#delta').textContent='—'; $('#s-before').textContent='0'; $('#s-after').textContent='0'; $('#s-changes').textContent='0';
+  ['punct','space','dup','blank','multi'].forEach(k=>document.querySelector('[data-n="'+k+'"]').textContent='');
+  input.focus();
+});
+$('#copy').addEventListener('click', ()=> copyText(output.textContent));
+$('#useAsInput').addEventListener('click', ()=>{
+  const v = output.textContent;
+  if (!v || output.classList.contains('empty')) { toast('还没有结果'); return; }
+  input.value = v; $('#counter').textContent = Array.from(v).length + ' 字'; tidy();
+});
+input.addEventListener('input', ()=>{ $('#counter').textContent = Array.from(input.value).length + ' 字'; });
+$('#rules').addEventListener('change', ()=>{ if (input.value.trim()) tidy(); });
+
+(function init(){
+  try {
+    const saved = JSON.parse(localStorage.getItem('tidy.rules') || 'null');
+    if (Array.isArray(saved)) document.querySelectorAll('input[data-rule]').forEach(cb=>{ cb.checked = saved.includes(cb.dataset.rule); });
+  } catch(e) {}
+  const btn = $('#buy');
+  if (BUY_URL) { btn.hidden = false; btn.textContent = '买断 · $9'; btn.addEventListener('click', ()=>window.open(BUY_URL,'_blank')); }
+  else { btn.hidden = false; btn.textContent = '内测免费'; btn.disabled = true; btn.style.opacity = .7; }
+  if (location.hash === '#sample') $('#sample').click();
+})();
+</script>
+</body>
+</html>
