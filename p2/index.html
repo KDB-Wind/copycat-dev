@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>线索抽取器 — 把一段乱文本里的邮箱、电话、链接、金额抽成表</title>
+<meta name="description" content="把聊天记录、报价单、网页里复制的一坨文字，一键抽出邮箱、电话、链接和金额，自动去重，可导出 CSV。无需登录。">
+<style>
+  :root{
+    --paper:#fbf9f4; --ink:#1c1917; --soft:#6b6560; --line:#e2ddd3;
+    --card:#ffffff; --accent:#7c3aed; --accent-soft:#f3ecff; --ok:#15803d; --bad:#b91c1c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:24px 16px 56px}
+  .kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:23px;line-height:1.35;margin:8px 0 8px;letter-spacing:-.2px}
+  .lede{color:var(--soft);font-size:14.5px;margin:0 0 20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+  label.blk{display:block;font-weight:700;font-size:14px;margin-bottom:8px}
+  textarea{
+    width:100%;min-height:140px;background:#fffefb;border:1px solid var(--line);border-radius:12px;
+    padding:12px;font:14.5px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink);outline:none;resize:vertical;
+  }
+  textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0}
+  .chip{display:flex;align-items:center;gap:7px;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer;font-size:14px;font-weight:600}
+  .chip input{width:17px;height:17px;accent-color:var(--accent);margin:0}
+  .chip.on{background:var(--accent-soft);border-color:#d6c4f8}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  button{min-height:44px;padding:0 16px;border-radius:11px;border:1px solid var(--line);background:#fff;color:var(--ink);
+    font:600 15px/1 inherit;cursor:pointer;transition:.15s}
+  button:hover{background:#f7f4ee}
+  .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .primary:hover{filter:brightness(1.07)}
+  .small{min-height:36px;padding:0 12px;font-size:13px;border-radius:9px}
+  .custom{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .custom input{flex:1 1 220px;min-height:44px;border:1px solid var(--line);border-radius:11px;padding:0 12px;font:14px/1 ui-monospace,Menlo,Consolas,monospace;outline:none;background:#fff}
+  .custom input:focus{border-color:var(--accent)}
+  .hint{font-size:12.5px;color:var(--soft)}
+  .err{color:var(--bad);font-size:13px;margin-top:8px;min-height:18px}
+  h2{font-size:16px;margin:26px 0 10px;display:flex;align-items:center;gap:8px}
+  .badge{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 9px}
+  .group{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:12px}
+  .ghead{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);background:#fdfcf9;font-size:13px;font-weight:700}
+  .ghead span.c{color:var(--soft);font-weight:600}
+  .item{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #f2eee6}
+  .item:last-child{border-bottom:none}
+  .item code{flex:1 1 auto;font:13.5px/1.5 ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+  .item button{flex:0 0 auto}
+  .empty{color:var(--soft);font-size:14px;padding:14px 0}
+  footer{margin-top:30px;border-top:1px solid var(--line);padding-top:16px;font-size:13px;color:var(--soft);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  footer a{color:var(--accent);text-decoration:none;font-weight:600}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,16px);background:var(--ink);color:#fff;padding:10px 16px;
+    border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:9}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .notes{font-size:13px;color:var(--soft);margin-top:16px;line-height:1.75;background:#fdfcf9;border:1px dashed var(--line);border-radius:12px;padding:12px 14px}
+  .notes b{color:#9a3412}
+  @media (max-width:420px){ .wrap{padding:18px 12px 44px} h1{font-size:20px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">extract · 不用登录</div>
+  <h1>把一坨乱文字，抽成一张联系人 / 数字表</h1>
+  <p class="lede">聊天记录、邮件正文、报价单、招聘帖里复制出来的整段话，粘进去就能拆出<b>邮箱、电话、链接、金额</b>，自动去重，能直接导出 CSV。全部在本地跑。</p>
+
+  <div class="card">
+    <label class="blk" for="input">① 粘贴原始文本</label>
+    <textarea id="input" placeholder="随便粘：&#10;王工 13812345678 报价 ¥12,800 含税，细节见 https://example.com/quote?id=88&#10;另一个联系人是 wang.gong@example.com，也可加微信"></textarea>
+
+    <div class="chips" id="types">
+      <label class="chip on"><input type="checkbox" data-type="email" checked>邮箱</label>
+      <label class="chip on"><input type="checkbox" data-type="phone" checked>电话</label>
+      <label class="chip on"><input type="checkbox" data-type="url" checked>链接</label>
+      <label class="chip on"><input type="checkbox" data-type="money" checked>金额</label>
+    </div>
+
+    <div class="custom">
+      <input id="customRe" placeholder="也可以加一条自己的规则，例如 订单号：NO-\d{6}">
+      <button class="small" id="addRe">加上这条</button>
+    </div>
+    <div class="err" id="reErr"></div>
+
+    <div class="row">
+      <button class="primary" id="run">开始抽取</button>
+      <button id="sample">用示例试一下</button>
+      <button id="clear">清空</button>
+    </div>
+    <p class="hint" style="margin:10px 0 0">去重规则：同一个值只留一次；电话会去掉空格和短横线再比较；链接去掉句尾的句号和右括号。</p>
+  </div>
+
+  <h2>② 抽取结果 <span class="badge" id="total">0 条</span></h2>
+  <div id="results"><div class="empty">还没有结果。上面粘一段文字，点「开始抽取」。</div></div>
+
+  <div class="row" id="actions" hidden>
+    <button class="primary" id="copyAll">复制全部</button>
+    <button id="csv">下载 CSV</button>
+    <button id="csvSep">换成分号分隔</button>
+  </div>
+
+  <div class="notes">
+    <b>什么时候会抽错：</b>没有分隔的 11 位纯数字（订单号、身份证号里的片段）可能被当成手机号；金额只认带 ¥ $ € 符号或带「元/万/美元」的写法，光写 12800 不会收；自定义规则用的是浏览器正则，写错会在上面报错。
+  </div>
+
+  <footer>
+    <span>纯本地处理，不上传、不存服务器</span>
+    <a href="../">← 全部三件</a>
+    <button id="buy" hidden style="min-height:0;padding:8px 14px;font-size:13px"></button>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const BUY_URL = ""; // 留空 = 内测免费
+const $ = (s)=>document.querySelector(s);
+
+const PATTERNS = {
+  email: {label:'邮箱', re:/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g},
+  phone: {label:'电话', re:/(?:\+?\d{1,3}[ \-]?)?(?:1[3-9]\d{9}|0\d{2,3}[ \-]?\d{7,8}|\d{3}[ \-]\d{3}[ \-]\d{4})/g},
+  url:   {label:'链接', re:/(?:https?:\/\/|www\.)[^\s，。；、）)\]】"'<>]+/g},
+  money: {label:'金额', re:/(?:[¥$€£]\s?\d[\d,]*(?:\.\d+)?|\d[\d,]*(?:\.\d+)?\s?(?:元|块钱|块|万|万元|美元|美金|欧元))/g}
+};
+
+function norm(type, s){
+  let v = s.trim();
+  if (type === 'phone'){
+    v = v.replace(/[\s\-]/g,'');
+    v = v.replace(/^\+?86(?=1[3-9]\d{9}$)/, ''); // 去掉 +86 再比对，避免同一个号重复
+    return v;
+  }
+  if (type === 'url') return v.replace(/[.,;:!?，。；：！？、]+$/,'');
+  return v;
+}
+
+let custom = null;
+let lastResults = [];
+
+function extract(){
+  const text = $('#input').value;
+  if (!text.trim()) { toast('先粘一段文字进来'); return; }
+  const counts = {};
+  const out = {};
+
+  const active = Array.from(document.querySelectorAll('#types input:checked')).map(i=>i.dataset.type);
+  active.forEach(t=>{
+    const p = PATTERNS[t];
+    const seen = new Set();
+    const list = [];
+    const m = text.match(p.re) || [];
+    m.forEach(raw=>{
+      const v = norm(t, raw);
+      const key = v.toLowerCase();
+      if (!v || seen.has(key)) return;
+      seen.add(key);
+      list.push(v);
+    });
+    out[t] = list;
+    counts[t] = list.length;
+  });
+
+  if (custom){
+    const seen = new Set(); const list = [];
+    try {
+      const re = new RegExp(custom, 'g');
+      (text.match(re) || []).forEach(raw=>{
+        const v = raw.trim(); const k = v.toLowerCase();
+        if (v && !seen.has(k)) { seen.add(k); list.push(v); }
+      });
+      out.custom = list;
+    } catch(e){ /* 正则已在添加时校验 */ }
+  }
+
+  lastResults = out;
+  render(out);
+}
+
+function render(out){
+  const box = $('#results');
+  box.innerHTML = '';
+  let total = 0;
+  const order = Object.keys(out);
+  order.forEach(t=>{
+    const list = out[t];
+    total += list.length;
+    const label = (PATTERNS[t] && PATTERNS[t].label) || ('自定义 · ' + custom);
+    const g = document.createElement('div');
+    g.className = 'group';
+    const head = document.createElement('div');
+    head.className = 'ghead';
+    head.innerHTML = label + ' <span class="c">' + list.length + ' 条</span>';
+    g.appendChild(head);
+    if (!list.length){
+      const e = document.createElement('div');
+      e.className = 'empty';
+      e.style.padding = '12px 14px';
+      e.textContent = '这段文字里没找到' + (PATTERNS[t] ? PATTERNS[t].label : '匹配项');
+      g.appendChild(e);
+    }
+    list.forEach(v=>{
+      const row = document.createElement('div');
+      row.className = 'item';
+      const code = document.createElement('code');
+      code.textContent = v;
+      const btn = document.createElement('button');
+      btn.className = 'small';
+      btn.textContent = '复制';
+      btn.addEventListener('click', ()=> copy(v));
+      row.appendChild(code); row.appendChild(btn);
+      g.appendChild(row);
+    });
+    box.appendChild(g);
+  });
+  if (!order.length) box.innerHTML = '<div class="empty">上面至少勾一个类型。</div>';
+  $('#total').textContent = total + ' 条';
+  $('#actions').hidden = total === 0;
+}
+
+function flat(sep){
+  const lines = [];
+  Object.keys(lastResults).forEach(t=>{
+    const label = (PATTERNS[t] && PATTERNS[t].label) || 'custom';
+    lastResults[t].forEach(v=> lines.push(sep ? [label, v].join(sep) : v));
+  });
+  return lines.join('\n');
+}
+
+async function copy(text){
+  try { await navigator.clipboard.writeText(text); toast('已复制'); }
+  catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.left='-9999px';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy'); ta.remove();
+    toast(ok ? '已复制' : '复制失败，请手动选中');
+  }
+}
+
+function toast(msg){
+  const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 1500);
+}
+
+$('#run').addEventListener('click', extract);
+$('#sample').addEventListener('click', ()=>{
+  $('#input').value = '王工 13812345678 报价 ¥12,800 含税,另一个方案 $2,450.5;细节见 https://example.com/quote?id=88。\n' +
+    '对接人是 wang.gong@example.com,备用 li_si@corp.com.cn,电话 +86 138-1234-5678。\n' +
+    '后台地址 www.example.com/admin 打不开,预算大概 3.5 万元,老板说要压到 2 万以内。';
+  extract();
+});
+$('#clear').addEventListener('click', ()=>{
+  $('#input').value = ''; $('#customRe').value = ''; $('#reErr').textContent = ''; custom = null; lastResults = [];
+  $('#results').innerHTML = '<div class="empty">还没有结果。上面粘一段文字，点「开始抽取」。</div>';
+  $('#total').textContent = '0 条'; $('#actions').hidden = true;
+});
+$('#types').addEventListener('change', (e)=>{
+  const lab = e.target.closest('.chip');
+  if (lab) lab.classList.toggle('on', e.target.checked);
+  if ($('#input').value.trim()) extract();
+});
+$('#addRe').addEventListener('click', ()=>{
+  const v = $('#customRe').value.trim();
+  if (!v){ $('#reErr').textContent = '先写一条规则，比如 NO-\\d{6}'; custom = null; return; }
+  try { new RegExp(v, 'g'); }
+  catch(e){ $('#reErr').textContent = '正则写错了：' + e.message; custom = null; return; }
+  $('#reErr').textContent = '';
+  custom = v;
+  if ($('#input').value.trim()) extract(); else toast('规则已记住，粘文本后点抽取');
+});
+$('#copyAll').addEventListener('click', ()=> copy(flat('')));
+$('#csv').addEventListener('click', ()=> downloadCSV(','));
+$('#csvSep').addEventListener('click', ()=> downloadCSV(';'));
+
+function downloadCSV(sep){
+  const rows = [['类型','值'].join(sep)];
+  Object.keys(lastResults).forEach(t=>{
+    const label = (PATTERNS[t] && PATTERNS[t].label) || 'custom';
+    lastResults[t].forEach(v=>{
+      const esc = (s)=> /["\n,;]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+      rows.push([esc(label), esc(v)].join(sep));
+    });
+  });
+  const blob = new Blob(['\uFEFF' + rows.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'extract-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  toast('CSV 已开始下载');
+}
+
+(function init(){
+  const btn = $('#buy');
+  btn.hidden = false;
+  if (BUY_URL){ btn.textContent = '买断 · $12'; btn.addEventListener('click', ()=>window.open(BUY_URL,'_blank')); }
+  else { btn.textContent = '内测免费'; btn.disabled = true; btn.style.opacity = .75; }
+})();
+</script>
+</body>
+</html>
