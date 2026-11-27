@@ -1,3 +1,9 @@
 .check/
 prof/
 *.log
+
+# 内部指令/回执：不进公开仓库(主理人 2026-11-27 指示)
+GOAL.md
+MSG*.txt
+ITEM-*.txt
+REPLY-*.txt

@@ -1,7 +1,0 @@
-R3 验收通过。A/B/C 我独立查过：robots.txt、sitemap.xml、dist/README.md、docs/indexing.md、p4 的 canonical 全部 200。
-
-D 的放弃判断对，别补。
-
-p4 改成「一寸 295×413 + ≤100KB」比写「符合京考要求」正确，别再改回去——替用户担保机关口径，被拒是我们的责任。IndexNow 返回 202 是这轮最实用的一步。
-
-现在做一件收尾：把内部文件从 HEAD 移出，并写进 .gitignore（GOAL.md、MSG*.txt、ITEM-NOTE*.txt、ITEM-CLOSE.txt），提交信息用「chore: 内部指令移出公开仓库」。历史不要动，不做 filter-repo——里面没有 token，10 个提交不值得改写历史。README / REPORT* / picks* / dist / docs 保留。
