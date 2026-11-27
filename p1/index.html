@@ -99,6 +99,15 @@
     <label class="rule"><input type="checkbox" data-rule="dup" checked><span><span class="t">重复标点</span><span class="d">，，。。 这种连打的合并成一个</span></span><span class="n" data-n="dup"></span></label>
     <label class="rule"><input type="checkbox" data-rule="blank" checked><span><span class="t">空行与行尾</span><span class="d">连续空行压成一个，去掉每行末尾的空格</span></span><span class="n" data-n="blank"></span></label>
     <label class="rule"><input type="checkbox" data-rule="multi" checked><span><span class="t">多余空格</span><span class="d">连续多个空格合成一个（代码缩进除外）</span></span><span class="n" data-n="multi"></span></label>
+    <label class="rule"><input type="checkbox" data-rule="quote" checked><span><span class="t">引号成对</span><span class="d">中文句子里的 "…" 换成 “…” '…' 换成 ‘…’，英文引号不动</span></span><span class="n" data-n="quote"></span></label>
+    <div class="rule"><span style="flex:1 1 auto"><span class="t">繁简转换</span><span class="d">按常用字表逐字替换（不是完整 OpenCC，生僻字和多音字不保证）</span></span>
+      <select id="variant" aria-label="繁简转换方向" style="min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);padding:0 8px;font-family:inherit;font-size:14px">
+        <option value="">不转换</option>
+        <option value="t2s">繁體 → 简体</option>
+        <option value="s2t">简体 → 繁體</option>
+      </select>
+      <span class="n" data-n="variant"></span>
+    </div>
   </div>
 
   <div class="card" style="margin-top:16px">
@@ -109,6 +118,7 @@
       <button class="primary" id="copy">复制结果</button>
       <button class="ghost" id="useAsInput">拿结果继续整理</button>
       <button class="ghost" id="toggleDiff">只显示成稿</button>
+      <button class="ghost" id="exportMd">导出 .md</button>
     </div>
     <div class="stats">
       <span>原文字数 <b id="s-before">0</b></span>
@@ -200,8 +210,45 @@ function fixMulti(text){
   return [t, n];
 }
 
-const RULES = {punct:fixPunct, space:fixSpace, dup:fixDup, blank:fixBlank, multi:fixMulti};
-const ORDER = ['punct','space','dup','blank','multi'];
+function fixQuote(text){
+  let n = 0;
+  let t = text.replace(/"([^"\n]{1,200})"/g, (m, inner)=>{
+    if (!HAN.test(inner)) return m;
+    n++; return '“' + inner + '”';
+  });
+  t = t.replace(/'([^'\n]{1,100})'/g, (m, inner)=>{
+    if (!HAN.test(inner)) return m;
+    n++; return '‘' + inner + '’';
+  });
+  return [t, n];
+}
+
+// 常用字繁简对照（约 900 字对）。只覆盖常用字；干/台/里/只/面 这类多对一的没放进来，宁可不动也不猜。
+const T2S_PAIRS = '間间麼么裡里裏里於于並并讚赞幾几歲岁級级線线準准複复佈布佔占們们這这說说話话語语讀读寫写書书學学習习時时問问見见來来後后發发過过還还個个為为對对開开關关長长門门車车馬马鳥鸟魚鱼龍龙風风雲云飛飞電电氣气頭头點点無无萬万與与專专業业東东絲丝兩两嚴严臨临麗丽舉举義义樂乐鄉乡買买亂乱爭争產产親亲億亿僅仅從从倉仓儀仪價价眾众優优會会偉伟傳传傷伤體体餘余俠侠債债傾倾償偿儲储兒儿蘭兰興兴養养獸兽軍军農农決决減减凱凯擊击劃划劉刘則则剛刚創创別别劇剧勸劝辦办務务動动勞劳勢势醫医華华協协單单賣卖衛卫廠厂廳厅歷历厲厉壓压厭厌縣县參参雙双變变敘叙葉叶號号嘆叹嗎吗聽听啟启員员響响啞哑喚唤團团園园圍围圖图圓圆聖圣場场壞坏塊块堅坚壇坛壩坝墳坟壟垄壘垒墾垦牆墙壯壮聲声殼壳處处備备復复夠够夾夹奪夺奮奋獎奖妝妆婦妇媽妈娛娱嬰婴孫孙寧宁寶宝實实寵宠審审憲宪宮宫寬宽賓宾寢寝尋寻導导壽寿將将爾尔塵尘嘗尝層层盡尽島岛峽峡嶄崭幣币帥帅師师帳帐帶带幫帮廣广莊庄慶庆廬庐應应廟庙龐庞廢废異异棄弃張张彈弹強强歸归當当錄录徹彻徑径憶忆憂忧懷怀態态憐怜總总戀恋懇恳惡恶惱恼懸悬驚惊懼惧慘惨懲惩憊惫慣惯憤愤願愿懶懒戲戏戰战戶户撲扑執执擴扩掃扫揚扬擾扰撫抚拋抛搶抢護护報报擔担擬拟攏拢揀拣擁拥攔拦撥拨擇择掛挂摯挚撈捞損损撿捡換换搗捣據据擲掷攬揽擱搁摟搂攪搅攜携攝摄擺摆搖摇撐撑攆撵敵敌斂敛數数齋斋鬥斗斬斩斷断舊旧曠旷晝昼顯显晉晋曬晒曉晓暈晕暫暂術术機机殺杀雜杂權权條条楊杨極极構构樞枢棗枣槍枪楓枫櫃柜標标棧栈棟栋欄栏樹树樣样檔档橋桥樺桦槳桨樁桩夢梦檢检樓楼檻槛橫横櫻樱櫥橱歡欢歐欧殲歼殘残殯殡毆殴畢毕斃毙氈毡匯汇漢汉湯汤溝沟沒没瀝沥淪沦滄沧滬沪淚泪瀧泷瀘泸瀉泻潑泼澤泽潔洁灑洒淺浅漿浆澆浇濁浊測测濟济瀏浏渾浑濃浓濤涛澇涝漣涟渦涡滌涤潤润漲涨澀涩淵渊漁渔滲渗溫温灣湾濕湿潰溃濺溅滾滚滯滞滿满濾滤濫滥濱滨灘滩瀟潇瀾澜瀕濒滅灭燈灯靈灵災灾燦灿爐炉煉炼熾炽爍烁爛烂煩烦燒烧燙烫燼烬熱热煥焕營营愛爱爺爷牘牍牽牵犧牺犢犊狀状猶犹狽狈獰狞獨独狹狭獅狮獄狱獵猎豬猪貓猫獻献獺獭瑪玛瑋玮環环現现瓏珑璉琏瑣琐瓊琼瑤瑶甌瓯畫画暢畅疇畴療疗瘧疟瘍疡瘡疮瘋疯癰痈痙痉癢痒癆痨瘓痪癇痫癟瘪癱瘫癮瘾癩癞癬癣癲癫皚皑皺皱盞盏鹽盐監监蓋盖盜盗盤盘睜睁睞睐瞼睑瞞瞒矚瞩矯矫磯矶礬矾礦矿碼码磚砖硯砚礪砺礎础碩硕確确礙碍磧碛禮礼禎祯禱祷禍祸稟禀祿禄禪禅離离禿秃稈秆種种積积稱称穢秽穩稳窮穷竊窃竅窍窯窑竄窜窩窝窺窥竇窦豎竖競竞篤笃筍笋筆笔箋笺籠笼築筑篩筛箏筝籌筹簽签簡简篋箧籮箩簞箪簫箫簍篓籃篮籬篱籟籁類类糧粮緊紧絹绢繡绣練练組组紳绅細细織织終终絆绊紹绍繹绎經经綁绑絨绒結结繞绕繪绘給给絢绚絡络絕绝絞绞統统綃绡綏绥繼继績绩緒绪綾绫續续綺绮緋绯綽绰繩绳維维綿绵綬绶繃绷綢绸綜综綻绽綠绿綴缀緬缅纜缆緝缉緞缎緩缓締缔縷缕編编緣缘縛缚縫缝纏缠縮缩縹缥纓缨繅缫繚缭繕缮繳缴網网羅罗罰罚罷罢羈羁翹翘聳耸恥耻聶聂聾聋職职聯联聰聪肅肃腸肠膚肤腎肾腫肿脹胀脅胁膽胆勝胜朧胧膠胶脈脉臍脐膿脓腦脑腳脚脫脱臉脸臘腊膩腻騰腾輿舆艦舰艙舱艱艰艷艳藝艺節节蕪芜葦苇莧苋蒼苍蘇苏莖茎繭茧蕎荞薈荟薺荠蕩荡榮荣葷荤熒荧蔭荫藥药萊莱蓮莲萵莴獲获瑩莹鶯莺蘿萝蕭萧薩萨蔥葱蔣蒋藍蓝薊蓟蘆芦藺蔺蘚藓虛虚蟲虫雖虽蝕蚀蟻蚁螞蚂蠶蚕蠱蛊蠣蛎蠻蛮蟄蛰蠅蝇蟬蝉蠟蜡釁衅銜衔補补襯衬襖袄襪袜襲袭裝装褲裤襤褴觀观規规覓觅視视覽览覺觉觸触譽誉計计訂订認认譏讥討讨讓让訓训議议訊讯記记講讲諱讳許许訛讹論论訟讼諷讽設设訪访訣诀證证評评識识詐诈訴诉診诊詞词譯译試试詩诗誠诚誅诛誕诞詭诡詢询詣诣該该詳详詫诧誡诫誣诬誤误誘诱誨诲誦诵請请諸诸諾诺誹诽課课誰谁調调諒谅談谈誼谊謀谋諜谍謊谎諫谏諧谐謂谓諭谕諮谘諳谙諺谚諦谛謎谜謝谢謠谣謗谤謙谦謹谨謬谬譚谭譜谱譴谴貝贝貞贞負负貢贡財财責责賢贤敗败賬账貨货質质販贩貪贪貧贫貶贬購购貯贮貫贯貳贰賤贱貼贴貴贵貸贷貿贸費费賀贺貽贻賊贼賈贾賄贿賃赁賂赂贓赃資资賑赈賒赊賦赋賭赌贖赎賞赏賜赐賠赔賴赖贅赘賺赚賽赛贊赞贈赠贍赡贏赢贛赣趙赵趕赶趨趋躍跃蹌跄踐践蹺跷躋跻踴踊躊踌蹤踪躡蹑蹣蹒軀躯軋轧軌轨軒轩轉转輪轮軟软轟轰軸轴輕轻載载轎轿較较輔辅輛辆輩辈輝辉輻辐輯辑輸输轄辖轅辕轍辙辭辞辯辩邊边遼辽達达遷迁邁迈運运進进遠远違违連连遲迟跡迹適适選选遜逊遞递邏逻遺遗遙遥鄧邓郵邮鄒邹鄰邻鬱郁鄭郑醞酝醬酱釀酿釋释鑑鉴針针釘钉釣钓鈣钙鈍钝鈔钞鐘钟鋼钢鈑钣鉤钩鈕钮錢钱鉗钳鈷钴鈴铃鉛铅鉀钾鐵铁銅铜鋁铝銘铭銀银鑄铸鋪铺鏈链銷销鎖锁鋤锄鍋锅鋒锋銳锐錯错錨锚錫锡錘锤錦锦錠锭鍵键鋸锯錳锰鍛锻鍍镀鎂镁鎮镇鎳镍鎬镐鎊镑鏡镜鍾钟鐮镰閃闪閉闭悶闷閘闸鬧闹聞闻閩闽閥阀閣阁閱阅閻阎闊阔隊队陽阳陰阴陣阵階阶際际陸陆陳陈陝陕險险隨随隱隐隸隶難难雛雏霧雾靜静韌韧韓韩頁页頂顶項项順顺須须頑顽顧顾頓顿頒颁頌颂預预領领頗颇頸颈頰颊頜颌頻频顆颗題题顏颜額额顛颠顫颤颯飒颱台飄飘饑饥飯饭飲饮飾饰飽饱飼饲餃饺餅饼餓饿館馆饋馈饞馋馭驭馳驰驅驱駁驳驢驴駛驶駐驻駝驼駕驾罵骂驕骄駱骆駭骇驗验駿骏騎骑騙骗騷骚驟骤驥骥髮发鬢鬓魷鱿魯鲁鮮鲜鯉鲤鯊鲨鯽鲫鯨鲸鰓鳃鱷鳄鰍鳅鰭鳍鱈鳕鱉鳖鰻鳗鱗鳞鳩鸠雞鸡鳴鸣鷗鸥鴉鸦鴨鸭鴦鸯鴛鸳鴕鸵鴿鸽鵑鹃鵝鹅鵲鹊鵬鹏鶴鹤鷹鹰鸚鹦麥麦黃黄齊齐齒齿齡龄齙龅齦龈齷龌龔龚龜龟';
+
+const T2S = new Map();
+const S2T = new Map();
+for (let i = 0; i < T2S_PAIRS.length; i += 2){
+  const t = T2S_PAIRS[i], s = T2S_PAIRS[i+1];
+  if (t === undefined || s === undefined) break;
+  T2S.set(t, s);
+  if (!S2T.has(s)) S2T.set(s, t);
+}
+
+function applyVariant(text, dir){
+  const map = dir === 't2s' ? T2S : S2T;
+  let n = 0;
+  let out = '';
+  for (const ch of text){
+    const rep = map.get(ch);
+    if (rep && rep !== ch){ out += rep; n++; }
+    else out += ch;
+  }
+  return [out, n];
+}
+
+const RULES = {punct:fixPunct, space:fixSpace, dup:fixDup, blank:fixBlank, multi:fixMulti, quote:fixQuote};
+const ORDER = ['punct','space','dup','blank','multi','quote'];
 
 let lastResult = '';
 let lastSource = '';
@@ -272,7 +319,9 @@ function tidy(){
     const [next, n] = RULES[k](t);
     t = next; counts[k] = n;
   });
-  ORDER.forEach(k => {
+  const dir = $('#variant').value;
+  if (dir){ const [vt, vn] = applyVariant(t, dir); t = vt; counts.variant = vn; }
+  ORDER.concat('variant').forEach(k => {
     const el = document.querySelector('[data-n="'+k+'"]');
     const c = counts[k];
     el.textContent = (c === undefined) ? '' : (c > 0 ? '改 ' + c + ' 处' : '无改动');
@@ -290,6 +339,7 @@ function tidy(){
   $('#delta').textContent = total ? '改了 ' + total + ' 处' : '已经很干净了';
   $('#counter').textContent = Array.from(src).length + ' 字';
   localStorage.setItem('tidy.rules', JSON.stringify(enabled()));
+  localStorage.setItem('tidy.variant', dir);
 }
 
 function toast(msg){
@@ -338,6 +388,17 @@ $('#toggleDiff').addEventListener('click', ()=>{
   localStorage.setItem('tidy.diff', showDiff ? 'on' : 'off');
   paint();
 });
+$('#variant').addEventListener('change', ()=>{ if (input.value.trim()) tidy(); });
+$('#exportMd').addEventListener('click', ()=>{
+  if (!lastResult){ toast('还没有结果'); return; }
+  const blob = new Blob([lastResult], {type:'text/markdown;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tidy-' + new Date().toISOString().slice(0,10) + '.md';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  toast('已下载 .md');
+});
 input.addEventListener('input', ()=>{ $('#counter').textContent = Array.from(input.value).length + ' 字'; });
 $('#rules').addEventListener('change', ()=>{ if (input.value.trim()) tidy(); });
 
@@ -349,6 +410,8 @@ $('#rules').addEventListener('change', ()=>{ if (input.value.trim()) tidy(); });
   const btn = $('#buy');
   if (BUY_URL) { btn.hidden = false; btn.textContent = '买断 · $9'; btn.addEventListener('click', ()=>window.open(BUY_URL,'_blank')); }
   else { btn.hidden = false; btn.textContent = '内测免费'; btn.disabled = true; btn.style.opacity = .7; }
+  const savedDir = localStorage.getItem('tidy.variant');
+  if (savedDir) $('#variant').value = savedDir;
   if (location.hash === '#sample') $('#sample').click();
 })();
 </script>
